@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var (
+const (
 	TYPE_SIMPLE = "simple"
 	TYPE_LRU    = "lru"
 	TYPE_LFU    = "lfu"
@@ -72,24 +72,25 @@ func (cb *CacheBuilder) EnableGC(interval time.Duration) *CacheBuilder {
 	return cb
 }
 
-func (cb *CacheBuilder) Simple() *CacheBuilder {
-	cb.tp = TYPE_SIMPLE
+func (cb *CacheBuilder) EvictType(tp string) *CacheBuilder {
+	cb.tp = tp
 	return cb
+}
+
+func (cb *CacheBuilder) Simple() *CacheBuilder {
+	return cb.EvictType(TYPE_SIMPLE)
 }
 
 func (cb *CacheBuilder) LRU() *CacheBuilder {
-	cb.tp = TYPE_LRU
-	return cb
+	return cb.EvictType(TYPE_LRU)
 }
 
 func (cb *CacheBuilder) LFU() *CacheBuilder {
-	cb.tp = TYPE_LFU
-	return cb
+	return cb.EvictType(TYPE_LFU)
 }
 
 func (cb *CacheBuilder) ARC() *CacheBuilder {
-	cb.tp = TYPE_ARC
-	return cb
+	return cb.EvictType(TYPE_ARC)
 }
 
 func (cb *CacheBuilder) EvictedFunc(evictedFunc EvictedFunc) *CacheBuilder {
