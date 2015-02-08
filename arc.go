@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Constantly balances between LRU and LFU, to improve the combined result.
 type ARC struct {
 	baseCache
 	items map[interface{}]*arcItem

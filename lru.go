@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Discards the least recently used items first.
 type LRUCache struct {
 	baseCache
 	items     map[interface{}]*list.Element

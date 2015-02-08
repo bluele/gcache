@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// SimpleCache has no clear priority for evict cache. It depends on key-value map order.
 type SimpleCache struct {
 	baseCache
 	items map[interface{}]*simpleItem

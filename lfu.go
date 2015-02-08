@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Discards the least frequently used items first.
 type LFUCache struct {
 	baseCache
 	items    map[interface{}]*lfuItem
