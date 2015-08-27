@@ -74,7 +74,9 @@ func (c *LRUCache) Get(key interface{}) (interface{}, error) {
 			defer c.mu.Unlock()
 			return it.value, nil
 		}
+		c.mu.Lock()
 		c.removeElement(item)
+		c.mu.Unlock()
 	}
 
 	if c.loaderFunc == nil {
