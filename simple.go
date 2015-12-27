@@ -20,8 +20,8 @@ func newSimpleCache(cb *CacheBuilder) *SimpleCache {
 
 // set a new key-value pair
 func (c *SimpleCache) Set(key, value interface{}) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 	c.set(key, value)
 }
 
@@ -57,30 +57,30 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 // If it dose not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
 func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
-	c.mu.RLock()
+	c.RLock()
 	item, ok := c.items[key]
-	c.mu.RUnlock()
+	c.RUnlock()
 	if ok {
-		if !item.IsExpired(nil) {
+		if item.IsExpired(nil) {
+			if c.asyncRefresh {
+				if !c.loadGroup.HasKey(key) {
+					go doLoading(c, key)
+				}
+				return item.value, nil
+			}
+		} else {
 			return item.value, nil
 		}
-		c.mu.Lock()
+		c.Lock()
 		c.remove(key)
-		c.mu.Unlock()
+		c.Unlock()
 	}
 
 	if c.loaderFunc == nil {
 		return nil, NotFoundKeyError
 	}
 
-	it, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
-		if e == nil {
-			c.mu.Lock()
-			defer c.mu.Unlock()
-			return c.set(key, v)
-		}
-		return nil, e
-	})
+	it, err := doLoading(c, key)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,8 @@ func (c *SimpleCache) evict(count int) {
 
 // Removes the provided key from the cache.
 func (c *SimpleCache) Remove(key interface{}) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	return c.remove(key)
 }
@@ -123,8 +123,8 @@ func (c *SimpleCache) remove(key interface{}) bool {
 
 // Returns a slice of the keys in the cache.
 func (c *SimpleCache) Keys() []interface{} {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	keys := make([]interface{}, len(c.items))
 	i := 0
@@ -138,16 +138,16 @@ func (c *SimpleCache) Keys() []interface{} {
 
 // Returns the number of items in the cache.
 func (c *SimpleCache) Len() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	return len(c.items)
 }
 
 // Completely clear the cache
 func (c *SimpleCache) Purge() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	c.items = make(map[interface{}]*simpleItem, c.size)
 }
@@ -156,21 +156,23 @@ func (c *SimpleCache) Purge() {
 func (c *SimpleCache) gc() {
 	now := time.Now()
 	keys := []interface{}{}
-	c.mu.RLock()
+	c.RLock()
 	for k, item := range c.items {
 		if item.IsExpired(&now) {
 			keys = append(keys, k)
 		}
 	}
-	c.mu.RUnlock()
+	c.RUnlock()
 	if len(keys) == 0 {
 		return
 	}
-	c.mu.Lock()
+	c.Lock()
 	for _, k := range keys {
-		c.remove(k)
+		if !c.loadGroup.HasKey(k) {
+			c.remove(k)
+		}
 	}
-	c.mu.Unlock()
+	c.Unlock()
 }
 
 type simpleItem struct {

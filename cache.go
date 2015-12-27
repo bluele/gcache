@@ -2,7 +2,6 @@ package gcache
 
 import (
 	"errors"
-	"github.com/bluele/gcache/singleflight"
 	"sync"
 	"time"
 )
@@ -27,13 +26,14 @@ type Cache interface {
 }
 
 type baseCache struct {
-	size        int
-	loaderFunc  *LoaderFunc
-	evictedFunc *EvictedFunc
-	addedFunc   *AddedFunc
-	expiration  *time.Duration
-	mu          sync.RWMutex
-	loadGroup   singleflight.Group
+	size         int
+	loaderFunc   *LoaderFunc
+	evictedFunc  *EvictedFunc
+	addedFunc    *AddedFunc
+	expiration   *time.Duration
+	loadGroup    Group
+	asyncRefresh bool
+	sync.RWMutex
 }
 
 type LoaderFunc func(interface{}) (interface{}, error)
@@ -43,13 +43,14 @@ type EvictedFunc func(interface{}, interface{})
 type AddedFunc func(interface{}, interface{})
 
 type CacheBuilder struct {
-	tp          string
-	size        int
-	loaderFunc  *LoaderFunc
-	evictedFunc *EvictedFunc
-	addedFunc   *AddedFunc
-	expiration  *time.Duration
-	gcInterval  *time.Duration
+	tp           string
+	size         int
+	loaderFunc   *LoaderFunc
+	evictedFunc  *EvictedFunc
+	addedFunc    *AddedFunc
+	expiration   *time.Duration
+	gcInterval   *time.Duration
+	asyncRefresh bool
 }
 
 func New(size int) *CacheBuilder {
@@ -62,8 +63,9 @@ func New(size int) *CacheBuilder {
 	}
 }
 
-func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
+func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc, asyncRefresh bool) *CacheBuilder {
 	cb.loaderFunc = &loaderFunc
+	cb.asyncRefresh = asyncRefresh
 	return cb
 }
 
@@ -146,6 +148,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
 	c.evictedFunc = cb.evictedFunc
+	c.asyncRefresh = cb.asyncRefresh
 }
 
 // load a new value using by specified key.
@@ -157,4 +160,22 @@ func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface
 		return nil, err
 	}
 	return v, nil
+}
+
+type CacheLoader interface {
+	load(interface{}, func(interface{}, error) (interface{}, error)) (interface{}, error)
+	set(interface{}, interface{}) (interface{}, error)
+	Lock()
+	Unlock()
+}
+
+func doLoading(c CacheLoader, key interface{}) (interface{}, error) {
+	return c.load(key, func(v interface{}, e error) (interface{}, error) {
+		if e == nil {
+			c.Lock()
+			defer c.Unlock()
+			return c.set(key, v)
+		}
+		return nil, e
+	})
 }

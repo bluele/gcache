@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package singleflight provides a duplicate function call suppression
 // mechanism.
-package singleflight
+package gcache
 
 import "sync"
 
@@ -30,7 +30,7 @@ type call struct {
 // Group represents a class of work and forms a namespace in which
 // units of work can be executed with duplicate suppression.
 type Group struct {
-	mu sync.Mutex            // protects m
+	mu sync.RWMutex          // protects m
 	m  map[interface{}]*call // lazily initialized
 }
 
@@ -61,4 +61,12 @@ func (g *Group) Do(key interface{}, fn func() (interface{}, error)) (interface{}
 	g.mu.Unlock()
 
 	return c.val, c.err
+}
+
+func (g *Group) HasKey(key interface{}) bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	_, ok := g.m[key]
+	return ok
 }
