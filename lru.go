@@ -72,6 +72,7 @@ func (c *LRUCache) Get(key interface{}) (interface{}, error) {
 		if !it.IsExpired(nil) {
 			c.mu.Lock()
 			defer c.mu.Unlock()
+			c.evictList.MoveToFront(item)
 			return it.value, nil
 		}
 		c.mu.Lock()
