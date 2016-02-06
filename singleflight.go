@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package singleflight provides a duplicate function call suppression
 // mechanism.
-package singleflight
+package gcache
 
 import "sync"
 
@@ -53,6 +53,41 @@ func (g *Group) Do(key interface{}, fn func() (interface{}, error)) (interface{}
 	g.m[key] = c
 	g.mu.Unlock()
 
+	c.val, c.err = fn()
+	c.wg.Done()
+
+	g.mu.Lock()
+	delete(g.m, key)
+	g.mu.Unlock()
+
+	return c.val, c.err
+}
+
+func (g *Group) DoWithOption(key interface{}, fn func() (interface{}, error), isWait bool) (interface{}, error) {
+	g.mu.Lock()
+	if g.m == nil {
+		g.m = make(map[interface{}]*call)
+	}
+	if c, ok := g.m[key]; ok {
+		g.mu.Unlock()
+		if !isWait {
+			return nil, NotFoundKeyError
+		}
+		c.wg.Wait()
+		return c.val, c.err
+	}
+	c := new(call)
+	c.wg.Add(1)
+	g.m[key] = c
+	g.mu.Unlock()
+	if !isWait {
+		go g.call(c, key, fn)
+		return nil, NotFoundKeyError
+	}
+	return g.call(c, key, fn)
+}
+
+func (g *Group) call(c *call, key interface{}, fn func() (interface{}, error)) (interface{}, error) {
 	c.val, c.err = fn()
 	c.wg.Done()
 

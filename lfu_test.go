@@ -68,3 +68,30 @@ func TestLFUEvictItem(t *testing.T) {
 		}
 	}
 }
+
+func TestLFUGetIFPresent(t *testing.T) {
+	cache := gcache.
+		New(8).
+		LoaderFunc(
+		func(key interface{}) (interface{}, error) {
+			time.Sleep(100 * time.Millisecond)
+			return "value", nil
+		}).
+		LFU().
+		Build()
+
+	v, err := cache.GetIFPresent("key")
+	if err != gcache.NotFoundKeyError {
+		t.Errorf("err should not be %v", err)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	v, err = cache.GetIFPresent("key")
+	if err != nil {
+		t.Errorf("err should not be %v", err)
+	}
+	if v != "value" {
+		t.Errorf("v should not be %v", v)
+	}
+}

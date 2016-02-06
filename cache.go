@@ -2,7 +2,6 @@ package gcache
 
 import (
 	"errors"
-	"github.com/bluele/gcache/singleflight"
 	"sync"
 	"time"
 )
@@ -19,6 +18,7 @@ var NotFoundKeyError = errors.New("Not found error.")
 type Cache interface {
 	Set(interface{}, interface{})
 	Get(interface{}) (interface{}, error)
+	GetIFPresent(interface{}) (interface{}, error)
 	Remove(interface{}) bool
 	Purge()
 	Keys() []interface{}
@@ -33,7 +33,7 @@ type baseCache struct {
 	addedFunc   *AddedFunc
 	expiration  *time.Duration
 	mu          sync.RWMutex
-	loadGroup   singleflight.Group
+	loadGroup   Group
 }
 
 type LoaderFunc func(interface{}) (interface{}, error)
@@ -62,6 +62,8 @@ func New(size int) *CacheBuilder {
 	}
 }
 
+// Set a loader function.
+// loaderFunc: create a new value with this function if cached value is expired.
 func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
 	cb.loaderFunc = &loaderFunc
 	return cb
@@ -149,10 +151,10 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 }
 
 // load a new value using by specified key.
-func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface{}, error)) (interface{}, error) {
-	v, err := c.loadGroup.Do(key, func() (interface{}, error) {
+func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface{}, error), isWait bool) (interface{}, error) {
+	v, err := c.loadGroup.DoWithOption(key, func() (interface{}, error) {
 		return cb((*c.loaderFunc)(key))
-	})
+	}, isWait)
 	if err != nil {
 		return nil, err
 	}
