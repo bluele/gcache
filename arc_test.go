@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bluele/gcache"
 	"testing"
+	"time"
 )
 
 func buildARCache(size int) gcache.Cache {
@@ -59,5 +60,32 @@ func TestARCEvictItem(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
+	}
+}
+
+func TestARCGetIFPresent(t *testing.T) {
+	cache := gcache.
+		New(8).
+		LoaderFunc(
+		func(key interface{}) (interface{}, error) {
+			time.Sleep(100 * time.Millisecond)
+			return "value", nil
+		}).
+		ARC().
+		Build()
+
+	v, err := cache.GetIFPresent("key")
+	if err != gcache.NotFoundKeyError {
+		t.Errorf("err should not be %v", err)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	v, err = cache.GetIFPresent("key")
+	if err != nil {
+		t.Errorf("err should not be %v", err)
+	}
+	if v != "value" {
+		t.Errorf("v should not be %v", v)
 	}
 }
