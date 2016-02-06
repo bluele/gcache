@@ -121,6 +121,25 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 
 // Get a value from cache pool using key if it exists. If not exists and it has LoaderFunc, it will generate the value using you have specified LoaderFunc method returns value.
 func (c *ARC) Get(key interface{}) (interface{}, error) {
+	v, err := c.get(key)
+	if err != nil {
+		return c.getWithLoader(key, true)
+	}
+	return v, nil
+}
+
+// Get a value from cache pool using key if it exists.
+// If it dose not exists key, returns NotFoundKeyError.
+// And send a request which refresh value for specified key if cache object has LoaderFunc.
+func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
+	v, err := c.get(key)
+	if err != nil {
+		return c.getWithLoader(key, false)
+	}
+	return v, nil
+}
+
+func (c *ARC) get(key interface{}) (interface{}, error) {
 	rl := false
 	c.mu.RLock()
 	if elt := c.t1.Lookup(key); elt != nil {
@@ -161,11 +180,13 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 	if !rl {
 		c.mu.RUnlock()
 	}
+	return nil, NotFoundKeyError
+}
 
+func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, NotFoundKeyError
 	}
-
 	item, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {
 			c.mu.Lock()
@@ -173,7 +194,7 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 			return c.set(key, v)
 		}
 		return nil, e
-	})
+	}, isWait)
 	if err != nil {
 		return nil, err
 	}
