@@ -129,7 +129,7 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 }
 
 // Get a value from cache pool using key if it exists.
-// If it dose not exists key, returns NotFoundKeyError.
+// If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
 	v, err := c.get(key)
@@ -180,12 +180,12 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 	if !rl {
 		c.mu.RUnlock()
 	}
-	return nil, NotFoundKeyError
+	return nil, KeyNotFoundError
 }
 
 func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
-		return nil, NotFoundKeyError
+		return nil, KeyNotFoundError
 	}
 	item, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {

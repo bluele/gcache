@@ -65,7 +65,7 @@ func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
 }
 
 // Get a value from cache pool using key if it exists.
-// If it dose not exists key, returns NotFoundKeyError.
+// If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
 	v, err := c.get(key)
@@ -87,12 +87,12 @@ func (c *SimpleCache) get(key interface{}) (interface{}, error) {
 		c.remove(key)
 		c.mu.Unlock()
 	}
-	return nil, NotFoundKeyError
+	return nil, KeyNotFoundError
 }
 
 func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
-		return nil, NotFoundKeyError
+		return nil, KeyNotFoundError
 	}
 	it, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {

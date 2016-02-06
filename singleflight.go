@@ -71,7 +71,7 @@ func (g *Group) DoWithOption(key interface{}, fn func() (interface{}, error), is
 	if c, ok := g.m[key]; ok {
 		g.mu.Unlock()
 		if !isWait {
-			return nil, NotFoundKeyError
+			return nil, KeyNotFoundError
 		}
 		c.wg.Wait()
 		return c.val, c.err
@@ -82,7 +82,7 @@ func (g *Group) DoWithOption(key interface{}, fn func() (interface{}, error), is
 	g.mu.Unlock()
 	if !isWait {
 		go g.call(c, key, fn)
-		return nil, NotFoundKeyError
+		return nil, KeyNotFoundError
 	}
 	return g.call(c, key, fn)
 }

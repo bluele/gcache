@@ -75,7 +75,7 @@ func TestSimpleGetIFPresent(t *testing.T) {
 		Build()
 
 	v, err := cache.GetIFPresent("key")
-	if err != gcache.NotFoundKeyError {
+	if err != gcache.KeyNotFoundError {
 		t.Errorf("err should not be %v", err)
 	}
 
