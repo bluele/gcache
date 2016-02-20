@@ -89,3 +89,26 @@ func TestSimpleGetIFPresent(t *testing.T) {
 		t.Errorf("v should not be %v", v)
 	}
 }
+
+func TestSimpleGetALL(t *testing.T) {
+	cache := gcache.
+		New(8).
+		Simple().
+		Build()
+
+	for i := 0; i < 8; i++ {
+		cache.Set(i, i*i)
+	}
+	m := cache.GetALL()
+	for i := 0; i < 8; i++ {
+		v, ok := m[i]
+		if !ok {
+			t.Errorf("m should contain %v", i)
+			continue
+		}
+		if v.(int) != i*i {
+			t.Errorf("%v != %v", v, i*i)
+			continue
+		}
+	}
+}

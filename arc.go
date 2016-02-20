@@ -243,6 +243,19 @@ func (c *ARC) Keys() []interface{} {
 	return keys
 }
 
+// Returns all key-value pairs in the cache.
+func (c *ARC) GetALL() map[interface{}]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	m := make(map[interface{}]interface{})
+	for k, v := range c.items {
+		m[k] = v.value
+	}
+
+	return m
+}
+
 // Len returns the number of items in the cache.
 func (c *ARC) Len() int {
 	c.mu.RLock()

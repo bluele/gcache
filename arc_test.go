@@ -89,3 +89,27 @@ func TestARCGetIFPresent(t *testing.T) {
 		t.Errorf("v should not be %v", v)
 	}
 }
+
+func TestARCGetALL(t *testing.T) {
+	size := 8
+	cache := gcache.
+		New(size).
+		ARC().
+		Build()
+
+	for i := 0; i < size; i++ {
+		cache.Set(i, i*i)
+	}
+	m := cache.GetALL()
+	for i := 0; i < size; i++ {
+		v, ok := m[i]
+		if !ok {
+			t.Errorf("m should contain %v", i)
+			continue
+		}
+		if v.(int) != i*i {
+			t.Errorf("%v != %v", v, i*i)
+			continue
+		}
+	}
+}

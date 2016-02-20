@@ -172,6 +172,19 @@ func (c *LRUCache) Keys() []interface{} {
 	return keys
 }
 
+// Returns all key-value pairs in the cache.
+func (c *LRUCache) GetALL() map[interface{}]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	m := make(map[interface{}]interface{})
+	for k, v := range c.items {
+		m[k] = v.Value.(*lruItem).value
+	}
+
+	return m
+}
+
 // Returns the number of items in the cache.
 func (c *LRUCache) Len() int {
 	c.mu.RLock()
