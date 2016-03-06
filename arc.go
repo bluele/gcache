@@ -42,7 +42,7 @@ func (c *ARC) replace(key interface{}) {
 	if ok {
 		delete(c.items, old)
 		if c.evictedFunc != nil {
-			go (*c.evictedFunc)(item.key, item.value)
+			(*c.evictedFunc)(item.key, item.value)
 		}
 	}
 }
@@ -96,7 +96,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 			if ok {
 				delete(c.items, pop)
 				if c.evictedFunc != nil {
-					go (*c.evictedFunc)(item.key, item.value)
+					(*c.evictedFunc)(item.key, item.value)
 				}
 			}
 		}
