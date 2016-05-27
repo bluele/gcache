@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	"github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	"github.com/nethack42/gcache"
 )
 
 func evictedFuncForLFU(key, value interface{}) {
@@ -16,6 +17,7 @@ func buildLFUCache(size int) gcache.Cache {
 		LFU().
 		EvictedFunc(evictedFuncForLFU).
 		Expiration(time.Second).
+		EnableGC(time.Second).
 		Build()
 }
 
@@ -25,6 +27,7 @@ func buildLoadingLFUCache(size int, loader gcache.LoaderFunc) gcache.Cache {
 		LoaderFunc(loader).
 		EvictedFunc(evictedFuncForLFU).
 		Expiration(time.Second).
+		EnableGC(time.Second).
 		Build()
 }
 
@@ -43,6 +46,7 @@ func TestLoadingLFUGet(t *testing.T) {
 
 	gc := buildLoadingLFUCache(size, loader)
 	testGetCache(t, gc, numbers)
+	gc.Stop()
 }
 
 func TestLFULength(t *testing.T) {
@@ -54,6 +58,7 @@ func TestLFULength(t *testing.T) {
 	if gc.Len() != expectedLength {
 		t.Errorf("Expected length is %v, not %v", length, expectedLength)
 	}
+	gc.Stop()
 }
 
 func TestLFUEvictItem(t *testing.T) {
@@ -67,6 +72,7 @@ func TestLFUEvictItem(t *testing.T) {
 			t.Errorf("Unexpected error: %v", err)
 		}
 	}
+	gc.Stop()
 }
 
 func TestLFUGetIFPresent(t *testing.T) {
@@ -94,6 +100,8 @@ func TestLFUGetIFPresent(t *testing.T) {
 	if v != "value" {
 		t.Errorf("v should not be %v", v)
 	}
+
+	cache.Stop()
 }
 
 func TestLFUGetALL(t *testing.T) {
@@ -118,4 +126,6 @@ func TestLFUGetALL(t *testing.T) {
 			continue
 		}
 	}
+
+	cache.Stop()
 }

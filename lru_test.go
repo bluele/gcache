@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	"github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	"github.com/nethack42/gcache"
 )
 
 func evictedFuncForLRU(key, value interface{}) {
@@ -114,4 +115,6 @@ func TestLRUGetALL(t *testing.T) {
 			continue
 		}
 	}
+
+	cache.Stop()
 }

@@ -25,6 +25,10 @@ type Cache interface {
 	Keys() []interface{}
 	Len() int
 	gc()
+	add(int)
+	done()
+	ShouldStop() <-chan bool
+	Stop()
 }
 
 type baseCache struct {
@@ -35,6 +39,25 @@ type baseCache struct {
 	expiration  *time.Duration
 	mu          sync.RWMutex
 	loadGroup   Group
+	stop        chan bool
+	running     sync.WaitGroup
+}
+
+func (c *baseCache) add(i int) {
+	c.running.Add(i)
+}
+
+func (c *baseCache) done() {
+	c.running.Done()
+}
+
+func (c *baseCache) Stop() {
+	close(c.stop)
+	c.running.Wait()
+}
+
+func (c *baseCache) ShouldStop() <-chan bool {
+	return c.stop
 }
 
 type LoaderFunc func(interface{}) (interface{}, error)
@@ -114,12 +137,18 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 func (cb *CacheBuilder) Build() Cache {
 	cache := cb.build()
 	if cb.gcInterval != nil {
+		cache.add(1)
 		go func() {
+			defer cache.done()
+
 			t := time.NewTicker(*cb.gcInterval)
+		Loop:
 			for {
 				select {
 				case <-t.C:
 					go cache.gc()
+				case <-cache.ShouldStop():
+					break Loop
 				}
 			}
 			t.Stop()
@@ -149,6 +178,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
 	c.evictedFunc = cb.evictedFunc
+	c.stop = make(chan bool)
 }
 
 // load a new value using by specified key.
