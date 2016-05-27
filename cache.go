@@ -25,8 +25,12 @@ type Cache interface {
 	Keys() []interface{}
 	Len() int
 	gc()
+
+	// internal waitgroup handling
 	add(int)
 	done()
+
+	// stop/termination handling
 	ShouldStop() <-chan bool
 	Stop()
 }
