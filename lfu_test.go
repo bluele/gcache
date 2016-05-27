@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nethack42/gcache"
+	"github.com/bluele/gcache"
 )
 
 func evictedFuncForLFU(key, value interface{}) {

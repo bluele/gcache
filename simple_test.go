@@ -2,7 +2,7 @@ package gcache_test
 
 import (
 	"fmt"
-	gcache "github.com/nethack42/gcache"
+	gcache "github.com/bluele/gcache"
 	"testing"
 	"time"
 )
