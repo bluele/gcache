@@ -1,3 +1,5 @@
+package gcache
+
 /*
 Copyright 2012 Google Inc.
 
@@ -14,9 +16,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package singleflight provides a duplicate function call suppression
+// This module provides a duplicate function call suppression
 // mechanism.
-package gcache
 
 import "sync"
 
@@ -30,51 +31,32 @@ type call struct {
 // Group represents a class of work and forms a namespace in which
 // units of work can be executed with duplicate suppression.
 type Group struct {
-	mu sync.Mutex            // protects m
-	m  map[interface{}]*call // lazily initialized
+	cache Cache
+	mu    sync.Mutex            // protects m
+	m     map[interface{}]*call // lazily initialized
 }
 
 // Do executes and returns the results of the given function, making
 // sure that only one execution is in-flight for a given key at a
 // time. If a duplicate comes in, the duplicate caller waits for the
 // original to complete and receives the same results.
-func (g *Group) Do(key interface{}, fn func() (interface{}, error)) (interface{}, error) {
+func (g *Group) Do(key interface{}, fn func() (interface{}, error), isWait bool) (interface{}, bool, error) {
 	g.mu.Lock()
-	if g.m == nil {
-		g.m = make(map[interface{}]*call)
-	}
-	if c, ok := g.m[key]; ok {
+	v, err := g.cache.get(key)
+	if err == nil {
 		g.mu.Unlock()
-		c.wg.Wait()
-		return c.val, c.err
+		return v, false, nil
 	}
-	c := new(call)
-	c.wg.Add(1)
-	g.m[key] = c
-	g.mu.Unlock()
-
-	c.val, c.err = fn()
-	c.wg.Done()
-
-	g.mu.Lock()
-	delete(g.m, key)
-	g.mu.Unlock()
-
-	return c.val, c.err
-}
-
-func (g *Group) DoWithOption(key interface{}, fn func() (interface{}, error), isWait bool) (interface{}, error) {
-	g.mu.Lock()
 	if g.m == nil {
 		g.m = make(map[interface{}]*call)
 	}
 	if c, ok := g.m[key]; ok {
 		g.mu.Unlock()
 		if !isWait {
-			return nil, KeyNotFoundError
+			return nil, false, KeyNotFoundError
 		}
 		c.wg.Wait()
-		return c.val, c.err
+		return c.val, false, c.err
 	}
 	c := new(call)
 	c.wg.Add(1)
@@ -82,9 +64,10 @@ func (g *Group) DoWithOption(key interface{}, fn func() (interface{}, error), is
 	g.mu.Unlock()
 	if !isWait {
 		go g.call(c, key, fn)
-		return nil, KeyNotFoundError
+		return nil, false, KeyNotFoundError
 	}
-	return g.call(c, key, fn)
+	v, err = g.call(c, key, fn)
+	return v, true, err
 }
 
 func (g *Group) call(c *call, key interface{}, fn func() (interface{}, error)) (interface{}, error) {

@@ -22,6 +22,7 @@ func newLFUCache(cb *CacheBuilder) *LFUCache {
 		freq:  0,
 		items: make(map[*lfuItem]byte),
 	})
+	c.loadGroup.cache = c
 	return c
 }
 
@@ -32,7 +33,7 @@ func (c *LFUCache) Set(key, value interface{}) {
 	c.set(key, value)
 }
 
-func (c *LFUCache) set(key, value interface{}) (*lfuItem, error) {
+func (c *LFUCache) set(key, value interface{}) (interface{}, error) {
 	// Check for existing item
 	item, ok := c.items[key]
 	if ok {
@@ -71,7 +72,7 @@ func (c *LFUCache) set(key, value interface{}) (*lfuItem, error) {
 // If it dose not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
 func (c *LFUCache) Get(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, true)
 	}
@@ -82,7 +83,7 @@ func (c *LFUCache) Get(key interface{}) (interface{}, error) {
 // If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *LFUCache) GetIFPresent(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, false)
 	}
@@ -99,7 +100,7 @@ func (c *LFUCache) get(key interface{}) (interface{}, error) {
 			c.mu.Lock()
 			c.increment(item)
 			c.mu.Unlock()
-			return item.value, nil
+			return item, nil
 		}
 		c.mu.Lock()
 		c.removeItem(item)
@@ -108,11 +109,19 @@ func (c *LFUCache) get(key interface{}) (interface{}, error) {
 	return nil, KeyNotFoundError
 }
 
+func (c *LFUCache) getValue(key interface{}) (interface{}, error) {
+	it, err := c.get(key)
+	if err != nil {
+		return nil, err
+	}
+	return it.(*lfuItem).value, nil
+}
+
 func (c *LFUCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	it, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
+	it, called, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {
 			c.mu.Lock()
 			defer c.mu.Unlock()
@@ -123,10 +132,12 @@ func (c *LFUCache) getWithLoader(key interface{}, isWait bool) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	li := it.(*lfuItem)
-	c.increment(li)
+	if !called {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.increment(li)
+	}
 	return li.value, nil
 }
 

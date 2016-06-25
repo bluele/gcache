@@ -15,6 +15,7 @@ func newSimpleCache(cb *CacheBuilder) *SimpleCache {
 	buildCache(&c.baseCache, cb)
 
 	c.items = make(map[interface{}]*simpleItem, c.size)
+	c.loadGroup.cache = c
 	return c
 }
 
@@ -57,7 +58,7 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 // If it dose not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
 func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, true)
 	}
@@ -68,7 +69,7 @@ func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
 // If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, false)
 	}
@@ -81,7 +82,7 @@ func (c *SimpleCache) get(key interface{}) (interface{}, error) {
 	c.mu.RUnlock()
 	if ok {
 		if !item.IsExpired(nil) {
-			return item.value, nil
+			return item, nil
 		}
 		c.mu.Lock()
 		c.remove(key)
@@ -90,11 +91,19 @@ func (c *SimpleCache) get(key interface{}) (interface{}, error) {
 	return nil, KeyNotFoundError
 }
 
+func (c *SimpleCache) getValue(key interface{}) (interface{}, error) {
+	it, err := c.get(key)
+	if err != nil {
+		return nil, err
+	}
+	return it.(*simpleItem).value, nil
+}
+
 func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	it, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
+	it, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {
 			c.mu.Lock()
 			defer c.mu.Unlock()
