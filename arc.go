@@ -26,6 +26,7 @@ func newARC(cb *CacheBuilder) *ARC {
 		b2:    newARCList(),
 	}
 	buildCache(&c.baseCache, cb)
+	c.loadGroup.cache = c
 	return c
 }
 
@@ -121,7 +122,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 
 // Get a value from cache pool using key if it exists. If not exists and it has LoaderFunc, it will generate the value using you have specified LoaderFunc method returns value.
 func (c *ARC) Get(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, true)
 	}
@@ -132,7 +133,7 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 // If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, false)
 	}
@@ -151,7 +152,7 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 		if !item.IsExpired(nil) {
 			c.t2.PushFront(key)
 			c.mu.Unlock()
-			return item.value, nil
+			return item, nil
 		}
 		c.b2.PushFront(key)
 		if c.evictedFunc != nil {
@@ -167,7 +168,7 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 		if !item.IsExpired(nil) {
 			c.t2.MoveToFront(elt)
 			c.mu.Unlock()
-			return item.value, nil
+			return item, nil
 		}
 		c.t2.Remove(key, elt)
 		c.b2.PushFront(key)
@@ -183,11 +184,19 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 	return nil, KeyNotFoundError
 }
 
+func (c *ARC) getValue(key interface{}) (interface{}, error) {
+	it, err := c.get(key)
+	if err != nil {
+		return nil, err
+	}
+	return it.(*arcItem).value, nil
+}
+
 func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	item, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
+	item, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {
 			c.mu.Lock()
 			defer c.mu.Unlock()

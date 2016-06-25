@@ -18,6 +18,7 @@ func newLRUCache(cb *CacheBuilder) *LRUCache {
 
 	c.evictList = list.New()
 	c.items = make(map[interface{}]*list.Element, c.size+1)
+	c.loadGroup.cache = c
 	return c
 }
 
@@ -63,7 +64,7 @@ func (c *LRUCache) Set(key, value interface{}) {
 // If it dose not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
 func (c *LRUCache) Get(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, true)
 	}
@@ -74,7 +75,7 @@ func (c *LRUCache) Get(key interface{}) (interface{}, error) {
 // If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *LRUCache) GetIFPresent(key interface{}) (interface{}, error) {
-	v, err := c.get(key)
+	v, err := c.getValue(key)
 	if err != nil {
 		return c.getWithLoader(key, false)
 	}
@@ -92,7 +93,7 @@ func (c *LRUCache) get(key interface{}) (interface{}, error) {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 			c.evictList.MoveToFront(item)
-			return it.value, nil
+			return it, nil
 		}
 		c.mu.Lock()
 		c.removeElement(item)
@@ -101,11 +102,19 @@ func (c *LRUCache) get(key interface{}) (interface{}, error) {
 	return nil, KeyNotFoundError
 }
 
+func (c *LRUCache) getValue(key interface{}) (interface{}, error) {
+	it, err := c.get(key)
+	if err != nil {
+		return nil, err
+	}
+	return it.(*lruItem).value, nil
+}
+
 func (c *LRUCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	it, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
+	it, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
 		if e == nil {
 			c.mu.Lock()
 			defer c.mu.Unlock()

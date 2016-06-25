@@ -20,6 +20,7 @@ type Cache interface {
 	Get(interface{}) (interface{}, error)
 	GetIFPresent(interface{}) (interface{}, error)
 	GetALL() map[interface{}]interface{}
+	get(interface{}) (interface{}, error)
 	Remove(interface{}) bool
 	Purge()
 	Keys() []interface{}
@@ -152,12 +153,12 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 }
 
 // load a new value using by specified key.
-func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface{}, error), isWait bool) (interface{}, error) {
-	v, err := c.loadGroup.DoWithOption(key, func() (interface{}, error) {
+func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
+	v, called, err := c.loadGroup.Do(key, func() (interface{}, error) {
 		return cb((*c.loaderFunc)(key))
 	}, isWait)
 	if err != nil {
-		return nil, err
+		return nil, called, err
 	}
-	return v, nil
+	return v, called, nil
 }
