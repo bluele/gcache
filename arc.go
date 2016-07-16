@@ -116,7 +116,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 	c.t1.PushFront(key)
 
 	if c.addedFunc != nil {
-		go (*c.addedFunc)(key, value)
+		(*c.addedFunc)(key, value)
 	}
 
 	return item, nil
@@ -158,7 +158,7 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 		}
 		c.b2.PushFront(key)
 		if c.evictedFunc != nil {
-			go (*c.evictedFunc)(key, elt.Value)
+			(*c.evictedFunc)(key, elt.Value)
 		}
 		c.mu.Unlock()
 	}
@@ -175,7 +175,7 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 		c.t2.Remove(key, elt)
 		c.b2.PushFront(key)
 		if c.evictedFunc != nil {
-			go (*c.evictedFunc)(key, elt.Value)
+			(*c.evictedFunc)(key, elt.Value)
 		}
 		c.mu.Unlock()
 	}
@@ -225,7 +225,7 @@ func (c *ARC) remove(key interface{}) bool {
 		v := elt.Value.(*arcItem).value
 		c.t1.Remove(key, elt)
 		if c.evictedFunc != nil {
-			go (*c.evictedFunc)(key, v)
+			(*c.evictedFunc)(key, v)
 		}
 		return true
 	}
@@ -234,7 +234,7 @@ func (c *ARC) remove(key interface{}) bool {
 		v := elt.Value.(*arcItem).value
 		c.t2.Remove(key, elt)
 		if c.evictedFunc != nil {
-			go (*c.evictedFunc)(key, v)
+			(*c.evictedFunc)(key, v)
 		}
 		return true
 	}
