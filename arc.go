@@ -35,9 +35,11 @@ func (c *ARC) replace(key interface{}) {
 	if (c.t1.Len() > 0 && c.b2.Has(key) && c.t1.Len() == c.part) || (c.t1.Len() > c.part) {
 		old = c.t1.RemoveTail()
 		c.b1.PushFront(old)
-	} else {
+	} else if c.t2.l.Len() > 0 {
 		old = c.t2.RemoveTail()
 		c.b2.PushFront(old)
+	} else {
+		return
 	}
 	item, ok := c.items[old]
 	if ok {
