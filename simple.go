@@ -76,23 +76,29 @@ func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func (c *SimpleCache) get(key interface{}) (interface{}, error) {
+func (c *SimpleCache) get(key interface{}, onLoad bool) (interface{}, error) {
 	c.mu.RLock()
 	item, ok := c.items[key]
 	c.mu.RUnlock()
 	if ok {
 		if !item.IsExpired(nil) {
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
 			return item, nil
 		}
 		c.mu.Lock()
 		c.remove(key)
 		c.mu.Unlock()
 	}
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
 	return nil, KeyNotFoundError
 }
 
 func (c *SimpleCache) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key)
+	it, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}

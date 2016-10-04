@@ -82,7 +82,7 @@ func (c *LRUCache) GetIFPresent(key interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func (c *LRUCache) get(key interface{}) (interface{}, error) {
+func (c *LRUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 	c.mu.RLock()
 	item, ok := c.items[key]
 	c.mu.RUnlock()
@@ -93,17 +93,23 @@ func (c *LRUCache) get(key interface{}) (interface{}, error) {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 			c.evictList.MoveToFront(item)
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
 			return it, nil
 		}
 		c.mu.Lock()
 		c.removeElement(item)
 		c.mu.Unlock()
 	}
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
 	return nil, KeyNotFoundError
 }
 
 func (c *LRUCache) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key)
+	it, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}

@@ -90,7 +90,7 @@ func (c *LFUCache) GetIFPresent(key interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func (c *LFUCache) get(key interface{}) (interface{}, error) {
+func (c *LFUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 	c.mu.RLock()
 	item, ok := c.items[key]
 	c.mu.RUnlock()
@@ -100,17 +100,23 @@ func (c *LFUCache) get(key interface{}) (interface{}, error) {
 			c.mu.Lock()
 			c.increment(item)
 			c.mu.Unlock()
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
 			return item, nil
 		}
 		c.mu.Lock()
 		c.removeItem(item)
 		c.mu.Unlock()
 	}
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
 	return nil, KeyNotFoundError
 }
 
 func (c *LFUCache) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key)
+	it, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}

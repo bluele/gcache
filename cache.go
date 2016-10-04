@@ -20,12 +20,14 @@ type Cache interface {
 	Get(interface{}) (interface{}, error)
 	GetIFPresent(interface{}) (interface{}, error)
 	GetALL() map[interface{}]interface{}
-	get(interface{}) (interface{}, error)
+	get(interface{}, bool) (interface{}, error)
 	Remove(interface{}) bool
 	Purge()
 	Keys() []interface{}
 	Len() int
 	gc()
+
+	statsAccessor
 }
 
 type baseCache struct {
@@ -36,6 +38,7 @@ type baseCache struct {
 	expiration  *time.Duration
 	mu          sync.RWMutex
 	loadGroup   Group
+	*stats
 }
 
 type LoaderFunc func(interface{}) (interface{}, error)
@@ -150,6 +153,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
 	c.evictedFunc = cb.evictedFunc
+	c.stats = &stats{}
 }
 
 // load a new value using by specified key.
