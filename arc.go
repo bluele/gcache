@@ -142,7 +142,7 @@ func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func (c *ARC) get(key interface{}) (interface{}, error) {
+func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 	rl := false
 	c.mu.RLock()
 	if elt := c.t1.Lookup(key); elt != nil {
@@ -154,6 +154,9 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 		if !item.IsExpired(nil) {
 			c.t2.PushFront(key)
 			c.mu.Unlock()
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
 			return item, nil
 		}
 		c.b2.PushFront(key)
@@ -170,6 +173,9 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 		if !item.IsExpired(nil) {
 			c.t2.MoveToFront(elt)
 			c.mu.Unlock()
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
 			return item, nil
 		}
 		c.t2.Remove(key, elt)
@@ -183,11 +189,14 @@ func (c *ARC) get(key interface{}) (interface{}, error) {
 	if !rl {
 		c.mu.RUnlock()
 	}
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
 	return nil, KeyNotFoundError
 }
 
 func (c *ARC) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key)
+	it, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}

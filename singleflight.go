@@ -42,7 +42,7 @@ type Group struct {
 // original to complete and receives the same results.
 func (g *Group) Do(key interface{}, fn func() (interface{}, error), isWait bool) (interface{}, bool, error) {
 	g.mu.Lock()
-	v, err := g.cache.get(key)
+	v, err := g.cache.get(key, true)
 	if err == nil {
 		g.mu.Unlock()
 		return v, false, nil
