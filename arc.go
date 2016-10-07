@@ -296,26 +296,6 @@ func (c *ARC) Purge() {
 	c.b2 = newARCList()
 }
 
-func (c *ARC) gc() {
-	now := time.Now()
-	keys := []interface{}{}
-	c.mu.RLock()
-	for k, item := range c.items {
-		if item.IsExpired(&now) {
-			keys = append(keys, k)
-		}
-	}
-	c.mu.RUnlock()
-	if len(keys) == 0 {
-		return
-	}
-	c.mu.Lock()
-	for _, k := range keys {
-		c.remove(k)
-	}
-	c.mu.Unlock()
-}
-
 // returns boolean value whether this item is expired or not.
 func (it *arcItem) IsExpired(now *time.Time) bool {
 	if it.expiration == nil {

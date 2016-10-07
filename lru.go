@@ -217,27 +217,6 @@ func (c *LRUCache) Purge() {
 	c.items = make(map[interface{}]*list.Element, c.size)
 }
 
-// evict all expired entry
-func (c *LRUCache) gc() {
-	now := time.Now()
-	keys := []interface{}{}
-	c.mu.RLock()
-	for k, item := range c.items {
-		if item.Value.(*lruItem).IsExpired(&now) {
-			keys = append(keys, k)
-		}
-	}
-	c.mu.RUnlock()
-	if len(keys) == 0 {
-		return
-	}
-	c.mu.Lock()
-	for _, k := range keys {
-		c.remove(k)
-	}
-	c.mu.Unlock()
-}
-
 type lruItem struct {
 	key        interface{}
 	value      interface{}
