@@ -25,7 +25,6 @@ type Cache interface {
 	Purge()
 	Keys() []interface{}
 	Len() int
-	gc()
 
 	statsAccessor
 }
@@ -54,7 +53,6 @@ type CacheBuilder struct {
 	evictedFunc *EvictedFunc
 	addedFunc   *AddedFunc
 	expiration  *time.Duration
-	gcInterval  *time.Duration
 }
 
 func New(size int) *CacheBuilder {
@@ -71,11 +69,6 @@ func New(size int) *CacheBuilder {
 // loaderFunc: create a new value with this function if cached value is expired.
 func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
 	cb.loaderFunc = &loaderFunc
-	return cb
-}
-
-func (cb *CacheBuilder) EnableGC(interval time.Duration) *CacheBuilder {
-	cb.gcInterval = &interval
 	return cb
 }
 
@@ -116,20 +109,7 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 }
 
 func (cb *CacheBuilder) Build() Cache {
-	cache := cb.build()
-	if cb.gcInterval != nil {
-		go func() {
-			t := time.NewTicker(*cb.gcInterval)
-			for {
-				select {
-				case <-t.C:
-					go cache.gc()
-				}
-			}
-			t.Stop()
-		}()
-	}
-	return cache
+	return cb.build()
 }
 
 func (cb *CacheBuilder) build() Cache {

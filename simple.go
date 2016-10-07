@@ -201,27 +201,6 @@ func (c *SimpleCache) Purge() {
 	c.items = make(map[interface{}]*simpleItem, c.size)
 }
 
-// evict all expired entry
-func (c *SimpleCache) gc() {
-	now := time.Now()
-	keys := []interface{}{}
-	c.mu.RLock()
-	for k, item := range c.items {
-		if item.IsExpired(&now) {
-			keys = append(keys, k)
-		}
-	}
-	c.mu.RUnlock()
-	if len(keys) == 0 {
-		return
-	}
-	c.mu.Lock()
-	for _, k := range keys {
-		c.remove(k)
-	}
-	c.mu.Unlock()
-}
-
 type simpleItem struct {
 	value      interface{}
 	expiration *time.Time

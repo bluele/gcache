@@ -253,27 +253,6 @@ func (c *LFUCache) Purge() {
 	c.items = make(map[interface{}]*lfuItem, c.size)
 }
 
-// evict all expired entry
-func (c *LFUCache) gc() {
-	now := time.Now()
-	keys := []interface{}{}
-	c.mu.RLock()
-	for k, item := range c.items {
-		if item.IsExpired(&now) {
-			keys = append(keys, k)
-		}
-	}
-	c.mu.RUnlock()
-	if len(keys) == 0 {
-		return
-	}
-	c.mu.Lock()
-	for _, k := range keys {
-		c.remove(k)
-	}
-	c.mu.Unlock()
-}
-
 type freqEntry struct {
 	freq  uint
 	items map[*lfuItem]byte
