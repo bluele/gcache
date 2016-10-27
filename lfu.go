@@ -16,14 +16,18 @@ func newLFUCache(cb *CacheBuilder) *LFUCache {
 	c := &LFUCache{}
 	buildCache(&c.baseCache, cb)
 
+	c.init()
+	c.loadGroup.cache = c
+	return c
+}
+
+func (c *LFUCache) init() {
 	c.freqList = list.New()
 	c.items = make(map[interface{}]*lfuItem, c.size+1)
 	c.freqList.PushFront(&freqEntry{
 		freq:  0,
 		items: make(map[*lfuItem]byte),
 	})
-	c.loadGroup.cache = c
-	return c
 }
 
 // set a new key-value pair
@@ -249,8 +253,7 @@ func (c *LFUCache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.freqList = list.New()
-	c.items = make(map[interface{}]*lfuItem, c.size)
+	c.init()
 }
 
 type freqEntry struct {

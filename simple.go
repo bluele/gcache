@@ -14,9 +14,13 @@ func newSimpleCache(cb *CacheBuilder) *SimpleCache {
 	c := &SimpleCache{}
 	buildCache(&c.baseCache, cb)
 
-	c.items = make(map[interface{}]*simpleItem, c.size)
+	c.init()
 	c.loadGroup.cache = c
 	return c
+}
+
+func (c *SimpleCache) init() {
+	c.items = make(map[interface{}]*simpleItem, c.size)
 }
 
 // set a new key-value pair
@@ -198,7 +202,7 @@ func (c *SimpleCache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.items = make(map[interface{}]*simpleItem, c.size)
+	c.init()
 }
 
 type simpleItem struct {
