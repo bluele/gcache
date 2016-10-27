@@ -16,10 +16,14 @@ func newLRUCache(cb *CacheBuilder) *LRUCache {
 	c := &LRUCache{}
 	buildCache(&c.baseCache, cb)
 
-	c.evictList = list.New()
-	c.items = make(map[interface{}]*list.Element, c.size+1)
+	c.init()
 	c.loadGroup.cache = c
 	return c
+}
+
+func (c *LRUCache) init() {
+	c.evictList = list.New()
+	c.items = make(map[interface{}]*list.Element, c.size+1)
 }
 
 func (c *LRUCache) set(key, value interface{}) (interface{}, error) {
@@ -213,8 +217,7 @@ func (c *LRUCache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.evictList = list.New()
-	c.items = make(map[interface{}]*list.Element, c.size)
+	c.init()
 }
 
 type lruItem struct {

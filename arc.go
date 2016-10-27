@@ -18,16 +18,20 @@ type ARC struct {
 }
 
 func newARC(cb *CacheBuilder) *ARC {
-	c := &ARC{
-		items: make(map[interface{}]*arcItem),
-		t1:    newARCList(),
-		t2:    newARCList(),
-		b1:    newARCList(),
-		b2:    newARCList(),
-	}
+	c := &ARC{}
 	buildCache(&c.baseCache, cb)
+
+	c.init()
 	c.loadGroup.cache = c
 	return c
+}
+
+func (c *ARC) init() {
+	c.items = make(map[interface{}]*arcItem)
+	c.t1 = newARCList()
+	c.t2 = newARCList()
+	c.b1 = newARCList()
+	c.b2 = newARCList()
 }
 
 func (c *ARC) replace(key interface{}) {
@@ -289,11 +293,7 @@ func (c *ARC) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.items = make(map[interface{}]*arcItem)
-	c.t1 = newARCList()
-	c.t2 = newARCList()
-	c.b1 = newARCList()
-	c.b2 = newARCList()
+	c.init()
 }
 
 // returns boolean value whether this item is expired or not.
