@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	"github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	"github.com/bluele/gcache"
 )
 
 func buildARCache(size int) gcache.Cache {
@@ -17,6 +18,15 @@ func buildARCache(size int) gcache.Cache {
 func buildLoadingARCache(size int) gcache.Cache {
 	return gcache.New(size).
 		ARC().
+		LoaderFunc(loader).
+		EvictedFunc(evictedFuncForARC).
+		Build()
+}
+
+func buildLoadingARCacheWithExpiration(size int, ep time.Duration) gcache.Cache {
+	return gcache.New(size).
+		ARC().
+		Expiration(ep).
 		LoaderFunc(loader).
 		EvictedFunc(evictedFuncForARC).
 		Build()
@@ -40,13 +50,21 @@ func TestLoadingARCGet(t *testing.T) {
 }
 
 func TestARCLength(t *testing.T) {
-	gc := buildLoadingARCache(1000)
+	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
 	gc.Get("test1")
 	gc.Get("test2")
+	gc.Get("test3")
 	length := gc.Len()
 	expectedLength := 2
-	if gc.Len() != expectedLength {
-		t.Errorf("Expected length is %v, not %v", length, expectedLength)
+	if length != expectedLength {
+		t.Errorf("Expected length is %v, not %v", expectedLength, length)
+	}
+	time.Sleep(time.Millisecond)
+	gc.Get("test4")
+	length = gc.Len()
+	expectedLength = 1
+	if length != expectedLength {
+		t.Errorf("Expected length is %v, not %v", expectedLength, length)
 	}
 }
 
@@ -64,52 +82,9 @@ func TestARCEvictItem(t *testing.T) {
 }
 
 func TestARCGetIFPresent(t *testing.T) {
-	cache := gcache.
-		New(8).
-		LoaderFunc(
-		func(key interface{}) (interface{}, error) {
-			time.Sleep(100 * time.Millisecond)
-			return "value", nil
-		}).
-		ARC().
-		Build()
-
-	v, err := cache.GetIFPresent("key")
-	if err != gcache.KeyNotFoundError {
-		t.Errorf("err should not be %v", err)
-	}
-
-	time.Sleep(200 * time.Millisecond)
-
-	v, err = cache.GetIFPresent("key")
-	if err != nil {
-		t.Errorf("err should not be %v", err)
-	}
-	if v != "value" {
-		t.Errorf("v should not be %v", v)
-	}
+	testGetIFPresent(t, gcache.TYPE_ARC)
 }
 
 func TestARCGetALL(t *testing.T) {
-	size := 8
-	cache := gcache.
-		New(size).
-		ARC().
-		Build()
-
-	for i := 0; i < size; i++ {
-		cache.Set(i, i*i)
-	}
-	m := cache.GetALL()
-	for i := 0; i < size; i++ {
-		v, ok := m[i]
-		if !ok {
-			t.Errorf("m should contain %v", i)
-			continue
-		}
-		if v.(int) != i*i {
-			t.Errorf("%v != %v", v, i*i)
-			continue
-		}
-	}
+	testGetALL(t, gcache.TYPE_ARC)
 }

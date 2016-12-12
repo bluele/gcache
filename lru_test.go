@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	"github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	"github.com/bluele/gcache"
 )
 
 func evictedFuncForLRU(key, value interface{}) {
@@ -66,52 +67,9 @@ func TestLRUEvictItem(t *testing.T) {
 }
 
 func TestLRUGetIFPresent(t *testing.T) {
-	cache := gcache.
-		New(8).
-		LoaderFunc(
-		func(key interface{}) (interface{}, error) {
-			time.Sleep(100 * time.Millisecond)
-			return "value", nil
-		}).
-		LRU().
-		Build()
-
-	v, err := cache.GetIFPresent("key")
-	if err != gcache.KeyNotFoundError {
-		t.Errorf("err should not be %v", err)
-	}
-
-	time.Sleep(200 * time.Millisecond)
-
-	v, err = cache.GetIFPresent("key")
-	if err != nil {
-		t.Errorf("err should not be %v", err)
-	}
-	if v != "value" {
-		t.Errorf("v should not be %v", v)
-	}
+	testGetIFPresent(t, gcache.TYPE_LRU)
 }
 
 func TestLRUGetALL(t *testing.T) {
-	size := 8
-	cache := gcache.
-		New(size).
-		LRU().
-		Build()
-
-	for i := 0; i < size; i++ {
-		cache.Set(i, i*i)
-	}
-	m := cache.GetALL()
-	for i := 0; i < size; i++ {
-		v, ok := m[i]
-		if !ok {
-			t.Errorf("m should contain %v", i)
-			continue
-		}
-		if v.(int) != i*i {
-			t.Errorf("%v != %v", v, i*i)
-			continue
-		}
-	}
+	testGetALL(t, gcache.TYPE_LRU)
 }
