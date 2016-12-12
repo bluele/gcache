@@ -71,52 +71,9 @@ func TestLFUEvictItem(t *testing.T) {
 }
 
 func TestLFUGetIFPresent(t *testing.T) {
-	cache := gcache.
-		New(8).
-		LoaderFunc(
-			func(key interface{}) (interface{}, error) {
-				time.Sleep(time.Millisecond)
-				return "value", nil
-			}).
-		LFU().
-		Build()
-
-	v, err := cache.GetIFPresent("key")
-	if err != gcache.KeyNotFoundError {
-		t.Errorf("err should not be %v", err)
-	}
-
-	time.Sleep(2 * time.Millisecond)
-
-	v, err = cache.GetIFPresent("key")
-	if err != nil {
-		t.Errorf("err should not be %v", err)
-	}
-	if v != "value" {
-		t.Errorf("v should not be %v", v)
-	}
+	testGetIFPresent(t, gcache.TYPE_LFU)
 }
 
 func TestLFUGetALL(t *testing.T) {
-	size := 8
-	cache := gcache.
-		New(size).
-		LFU().
-		Build()
-
-	for i := 0; i < size; i++ {
-		cache.Set(i, i*i)
-	}
-	m := cache.GetALL()
-	for i := 0; i < size; i++ {
-		v, ok := m[i]
-		if !ok {
-			t.Errorf("m should contain %v", i)
-			continue
-		}
-		if v.(int) != i*i {
-			t.Errorf("%v != %v", v, i*i)
-			continue
-		}
-	}
+	testGetALL(t, gcache.TYPE_LFU)
 }
