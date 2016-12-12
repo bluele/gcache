@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	"github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	"github.com/bluele/gcache"
 )
 
 func buildARCache(size int) gcache.Cache {
@@ -17,6 +18,15 @@ func buildARCache(size int) gcache.Cache {
 func buildLoadingARCache(size int) gcache.Cache {
 	return gcache.New(size).
 		ARC().
+		LoaderFunc(loader).
+		EvictedFunc(evictedFuncForARC).
+		Build()
+}
+
+func buildLoadingARCacheWithExpiration(size int, ep time.Duration) gcache.Cache {
+	return gcache.New(size).
+		ARC().
+		Expiration(ep).
 		LoaderFunc(loader).
 		EvictedFunc(evictedFuncForARC).
 		Build()
@@ -40,13 +50,21 @@ func TestLoadingARCGet(t *testing.T) {
 }
 
 func TestARCLength(t *testing.T) {
-	gc := buildLoadingARCache(1000)
+	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
 	gc.Get("test1")
 	gc.Get("test2")
+	gc.Get("test3")
 	length := gc.Len()
 	expectedLength := 2
-	if gc.Len() != expectedLength {
-		t.Errorf("Expected length is %v, not %v", length, expectedLength)
+	if length != expectedLength {
+		t.Errorf("Expected length is %v, not %v", expectedLength, length)
+	}
+	time.Sleep(time.Millisecond)
+	gc.Get("test4")
+	length = gc.Len()
+	expectedLength = 1
+	if length != expectedLength {
+		t.Errorf("Expected length is %v, not %v", expectedLength, length)
 	}
 }
 
@@ -67,10 +85,10 @@ func TestARCGetIFPresent(t *testing.T) {
 	cache := gcache.
 		New(8).
 		LoaderFunc(
-		func(key interface{}) (interface{}, error) {
-			time.Sleep(100 * time.Millisecond)
-			return "value", nil
-		}).
+			func(key interface{}) (interface{}, error) {
+				time.Sleep(time.Millisecond)
+				return "value", nil
+			}).
 		ARC().
 		Build()
 
@@ -79,7 +97,7 @@ func TestARCGetIFPresent(t *testing.T) {
 		t.Errorf("err should not be %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(2 * time.Millisecond)
 
 	v, err = cache.GetIFPresent("key")
 	if err != nil {
@@ -94,6 +112,7 @@ func TestARCGetALL(t *testing.T) {
 	size := 8
 	cache := gcache.
 		New(size).
+		Expiration(time.Millisecond).
 		ARC().
 		Build()
 
@@ -111,5 +130,15 @@ func TestARCGetALL(t *testing.T) {
 			t.Errorf("%v != %v", v, i*i)
 			continue
 		}
+	}
+	time.Sleep(time.Millisecond)
+
+	cache.Set(size, size*size)
+	m = cache.GetALL()
+	if len(m) != 1 {
+		t.Errorf("%v != %v", len(m), 1)
+	}
+	if _, ok := m[size]; !ok {
+		t.Errorf("%v should contains key '%v'", m, size)
 	}
 }

@@ -164,6 +164,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			return item, nil
 		}
 		c.b2.PushFront(key)
+		delete(c.items, key)
 		if c.evictedFunc != nil {
 			(*c.evictedFunc)(key, elt.Value)
 		}
@@ -184,6 +185,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 		}
 		c.t2.Remove(key, elt)
 		c.b2.PushFront(key)
+		delete(c.items, key)
 		if c.evictedFunc != nil {
 			(*c.evictedFunc)(key, elt.Value)
 		}
@@ -255,37 +257,45 @@ func (c *ARC) remove(key interface{}) bool {
 	return false
 }
 
-// Keys returns a slice of the keys in the cache.
-func (c *ARC) Keys() []interface{} {
+func (c *ARC) keys() []interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+	keys := make([]interface{}, len(c.items))
+	var i = 0
+	for k := range c.items {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
 
+// Keys returns a slice of the keys in the cache.
+func (c *ARC) Keys() []interface{} {
 	keys := []interface{}{}
-	for key := range c.items {
-		keys = append(keys, key)
+	for _, k := range c.keys() {
+		_, err := c.GetIFPresent(k)
+		if err == nil {
+			keys = append(keys, k)
+		}
 	}
 	return keys
 }
 
 // Returns all key-value pairs in the cache.
 func (c *ARC) GetALL() map[interface{}]interface{} {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	m := make(map[interface{}]interface{})
-	for k, v := range c.items {
-		m[k] = v.value
+	for _, k := range c.keys() {
+		v, err := c.GetIFPresent(k)
+		if err == nil {
+			m[k] = v
+		}
 	}
-
 	return m
 }
 
 // Len returns the number of items in the cache.
 func (c *ARC) Len() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return len(c.items)
+	return len(c.GetALL())
 }
 
 // Purge is used to completely clear the cache

@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	gcache "github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	gcache "github.com/bluele/gcache"
 )
 
 func buildSimpleCache(size int) gcache.Cache {
@@ -67,10 +68,10 @@ func TestSimpleGetIFPresent(t *testing.T) {
 	cache := gcache.
 		New(8).
 		LoaderFunc(
-		func(key interface{}) (interface{}, error) {
-			time.Sleep(100 * time.Millisecond)
-			return "value", nil
-		}).
+			func(key interface{}) (interface{}, error) {
+				time.Sleep(time.Millisecond)
+				return "value", nil
+			}).
 		Simple().
 		Build()
 
@@ -79,7 +80,7 @@ func TestSimpleGetIFPresent(t *testing.T) {
 		t.Errorf("err should not be %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(2 * time.Millisecond)
 
 	v, err = cache.GetIFPresent("key")
 	if err != nil {

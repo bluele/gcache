@@ -2,9 +2,10 @@ package gcache_test
 
 import (
 	"fmt"
-	"github.com/bluele/gcache"
 	"testing"
 	"time"
+
+	"github.com/bluele/gcache"
 )
 
 func evictedFuncForLRU(key, value interface{}) {
@@ -69,10 +70,10 @@ func TestLRUGetIFPresent(t *testing.T) {
 	cache := gcache.
 		New(8).
 		LoaderFunc(
-		func(key interface{}) (interface{}, error) {
-			time.Sleep(100 * time.Millisecond)
-			return "value", nil
-		}).
+			func(key interface{}) (interface{}, error) {
+				time.Sleep(time.Millisecond)
+				return "value", nil
+			}).
 		LRU().
 		Build()
 
@@ -81,7 +82,7 @@ func TestLRUGetIFPresent(t *testing.T) {
 		t.Errorf("err should not be %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(2 * time.Millisecond)
 
 	v, err = cache.GetIFPresent("key")
 	if err != nil {

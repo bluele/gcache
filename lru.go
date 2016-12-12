@@ -176,40 +176,45 @@ func (c *LRUCache) removeElement(e *list.Element) {
 	}
 }
 
-// Returns a slice of the keys in the cache.
-func (c *LRUCache) Keys() []interface{} {
+func (c *LRUCache) keys() []interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
 	keys := make([]interface{}, len(c.items))
-	i := 0
+	var i = 0
 	for k := range c.items {
 		keys[i] = k
 		i++
 	}
+	return keys
+}
 
+// Returns a slice of the keys in the cache.
+func (c *LRUCache) Keys() []interface{} {
+	keys := []interface{}{}
+	for _, k := range c.keys() {
+		_, err := c.GetIFPresent(k)
+		if err == nil {
+			keys = append(keys, k)
+		}
+	}
 	return keys
 }
 
 // Returns all key-value pairs in the cache.
 func (c *LRUCache) GetALL() map[interface{}]interface{} {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	m := make(map[interface{}]interface{})
-	for k, v := range c.items {
-		m[k] = v.Value.(*lruItem).value
+	for _, k := range c.keys() {
+		v, err := c.GetIFPresent(k)
+		if err == nil {
+			m[k] = v
+		}
 	}
-
 	return m
 }
 
 // Returns the number of items in the cache.
 func (c *LRUCache) Len() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return len(c.items)
+	return len(c.GetALL())
 }
 
 // Completely clear the cache
