@@ -351,6 +351,10 @@ func (al *arcList) MoveToFront(elt *list.Element) {
 }
 
 func (al *arcList) PushFront(key interface{}) {
+	if elt, ok := al.keys[key]; ok {
+		al.l.MoveToFront(elt)
+		return
+	}
 	elt := al.l.PushFront(key)
 	al.keys[key] = elt
 }
