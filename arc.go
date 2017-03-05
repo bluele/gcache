@@ -77,6 +77,16 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 		item.expiration = &t
 	}
 
+	defer func() {
+		if c.addedFunc != nil {
+			(*c.addedFunc)(key, value)
+		}
+	}()
+
+	if c.t1.Has(key) || c.t2.Has(key) {
+		return item, nil
+	}
+
 	if elt := c.b1.Lookup(key); elt != nil {
 		c.part = minInt(c.size, c.part+maxInt(c.b2.Len()/c.b1.Len(), 1))
 		c.replace(key)
@@ -116,13 +126,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 			c.replace(key)
 		}
 	}
-
 	c.t1.PushFront(key)
-
-	if c.addedFunc != nil {
-		(*c.addedFunc)(key, value)
-	}
-
 	return item, nil
 }
 
@@ -147,54 +151,43 @@ func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
 }
 
 func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
-	rl := false
-	c.mu.RLock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if elt := c.t1.Lookup(key); elt != nil {
-		c.mu.RUnlock()
-		rl = true
-		c.mu.Lock()
 		c.t1.Remove(key, elt)
 		item := c.items[key]
 		if !item.IsExpired(nil) {
 			c.t2.PushFront(key)
-			c.mu.Unlock()
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
 			return item, nil
+		} else {
+			delete(c.items, key)
+			c.b1.PushFront(key)
+			if c.evictedFunc != nil {
+				(*c.evictedFunc)(key, item.value)
+			}
 		}
-		c.b2.PushFront(key)
-		delete(c.items, key)
-		if c.evictedFunc != nil {
-			(*c.evictedFunc)(key, elt.Value)
-		}
-		c.mu.Unlock()
 	}
 	if elt := c.t2.Lookup(key); elt != nil {
-		c.mu.RUnlock()
-		rl = true
-		c.mu.Lock()
 		item := c.items[key]
 		if !item.IsExpired(nil) {
 			c.t2.MoveToFront(elt)
-			c.mu.Unlock()
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
 			return item, nil
+		} else {
+			delete(c.items, key)
+			c.t2.Remove(key, elt)
+			c.b2.PushFront(key)
+			if c.evictedFunc != nil {
+				(*c.evictedFunc)(key, elt.Value)
+			}
 		}
-		c.t2.Remove(key, elt)
-		c.b2.PushFront(key)
-		delete(c.items, key)
-		if c.evictedFunc != nil {
-			(*c.evictedFunc)(key, elt.Value)
-		}
-		c.mu.Unlock()
 	}
 
-	if !rl {
-		c.mu.RUnlock()
-	}
 	if !onLoad {
 		c.stats.IncrMissCount()
 	}
