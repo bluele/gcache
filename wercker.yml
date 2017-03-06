@@ -26,6 +26,12 @@ build:
     # at the right place in the workspace tree
     - setup-go-workspace
 
+    # Prints go version
+    - script:
+        name: go version
+        code: |
+          go version
+
     # Gets the dependencies
     - script:
         name: go get
