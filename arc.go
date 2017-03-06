@@ -166,7 +166,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			delete(c.items, key)
 			c.b1.PushFront(key)
 			if c.evictedFunc != nil {
-				(*c.evictedFunc)(key, item.value)
+				(*c.evictedFunc)(item.key, item.value)
 			}
 		}
 	}
@@ -183,7 +183,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			c.t2.Remove(key, elt)
 			c.b2.PushFront(key)
 			if c.evictedFunc != nil {
-				(*c.evictedFunc)(key, elt.Value)
+				(*c.evictedFunc)(item.key, item.value)
 			}
 		}
 	}
