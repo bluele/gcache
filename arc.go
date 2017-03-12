@@ -54,13 +54,22 @@ func (c *ARC) replace(key interface{}) {
 	}
 }
 
-func (c *ARC) Set(key, value interface{}) {
+func (c *ARC) Set(key, value interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.set(key, value)
+	_, err := c.set(key, value)
+	return err
 }
 
 func (c *ARC) set(key, value interface{}) (interface{}, error) {
+	var err error
+	if c.setterFunc != nil {
+		value, err = c.setterFunc(key, value)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	item, ok := c.items[key]
 	if ok {
 		item.value = value
@@ -133,10 +142,10 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 // Get a value from cache pool using key if it exists. If not exists and it has LoaderFunc, it will generate the value using you have specified LoaderFunc method returns value.
 func (c *ARC) Get(key interface{}) (interface{}, error) {
 	v, err := c.getValue(key)
-	if err != nil {
+	if err == KeyNotFoundError {
 		return c.getWithLoader(key, true)
 	}
-	return v, nil
+	return v, err
 }
 
 // Get a value from cache pool using key if it exists.
@@ -144,10 +153,10 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
 	v, err := c.getValue(key)
-	if err != nil {
+	if err == KeyNotFoundError {
 		return c.getWithLoader(key, false)
 	}
-	return v, nil
+	return v, err
 }
 
 func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
@@ -199,25 +208,39 @@ func (c *ARC) getValue(key interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return it.(*arcItem).value, nil
+	v := it.(*arcItem).value
+	if c.getterFunc != nil {
+		return c.getterFunc(key, v)
+	}
+	return v, nil
 }
 
 func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	item, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
-		if e == nil {
-			c.mu.Lock()
-			defer c.mu.Unlock()
-			return c.set(key, v)
+	value, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
+		if e != nil {
+			return nil, e
 		}
-		return nil, e
+		c.mu.Lock()
+		it, err := c.set(key, v)
+		if err != nil {
+			c.mu.Unlock()
+			return nil, err
+		}
+		v = it.(*arcItem).value
+		if c.getterFunc == nil {
+			c.mu.Unlock()
+			return v, nil
+		}
+		c.mu.Unlock()
+		return c.getterFunc(key, v)
 	}, isWait)
 	if err != nil {
 		return nil, err
 	}
-	return item.(*arcItem).value, nil
+	return value, nil
 }
 
 // Remove removes the provided key from the cache.
