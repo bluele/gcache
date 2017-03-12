@@ -31,9 +31,9 @@ type Cache interface {
 
 type baseCache struct {
 	size        int
-	loaderFunc  *LoaderFunc
-	evictedFunc *EvictedFunc
-	addedFunc   *AddedFunc
+	loaderFunc  LoaderFunc
+	evictedFunc EvictedFunc
+	addedFunc   AddedFunc
 	expiration  *time.Duration
 	mu          sync.RWMutex
 	loadGroup   Group
@@ -49,9 +49,9 @@ type AddedFunc func(interface{}, interface{})
 type CacheBuilder struct {
 	tp          string
 	size        int
-	loaderFunc  *LoaderFunc
-	evictedFunc *EvictedFunc
-	addedFunc   *AddedFunc
+	loaderFunc  LoaderFunc
+	evictedFunc EvictedFunc
+	addedFunc   AddedFunc
 	expiration  *time.Duration
 }
 
@@ -68,7 +68,7 @@ func New(size int) *CacheBuilder {
 // Set a loader function.
 // loaderFunc: create a new value with this function if cached value is expired.
 func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
-	cb.loaderFunc = &loaderFunc
+	cb.loaderFunc = loaderFunc
 	return cb
 }
 
@@ -94,12 +94,12 @@ func (cb *CacheBuilder) ARC() *CacheBuilder {
 }
 
 func (cb *CacheBuilder) EvictedFunc(evictedFunc EvictedFunc) *CacheBuilder {
-	cb.evictedFunc = &evictedFunc
+	cb.evictedFunc = evictedFunc
 	return cb
 }
 
 func (cb *CacheBuilder) AddedFunc(addedFunc AddedFunc) *CacheBuilder {
-	cb.addedFunc = &addedFunc
+	cb.addedFunc = addedFunc
 	return cb
 }
 
@@ -139,7 +139,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 // load a new value using by specified key.
 func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
 	v, called, err := c.loadGroup.Do(key, func() (interface{}, error) {
-		return cb((*c.loaderFunc)(key))
+		return cb(c.loaderFunc(key))
 	}, isWait)
 	if err != nil {
 		return nil, called, err

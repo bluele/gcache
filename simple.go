@@ -52,7 +52,7 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 	}
 
 	if c.addedFunc != nil {
-		(*c.addedFunc)(key, value)
+		c.addedFunc(key, value)
 	}
 
 	return item, nil
@@ -154,7 +154,7 @@ func (c *SimpleCache) remove(key interface{}) bool {
 	if ok {
 		delete(c.items, key)
 		if c.evictedFunc != nil {
-			(*c.evictedFunc)(key, item.value)
+			c.evictedFunc(key, item.value)
 		}
 		return true
 	}

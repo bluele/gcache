@@ -51,7 +51,7 @@ func (c *LRUCache) set(key, value interface{}) (interface{}, error) {
 	}
 
 	if c.addedFunc != nil {
-		(*c.addedFunc)(key, value)
+		c.addedFunc(key, value)
 	}
 
 	return item, nil
@@ -172,7 +172,7 @@ func (c *LRUCache) removeElement(e *list.Element) {
 	delete(c.items, entry.key)
 	if c.evictedFunc != nil {
 		entry := e.Value.(*lruItem)
-		(*c.evictedFunc)(entry.key, entry.value)
+		c.evictedFunc(entry.key, entry.value)
 	}
 }
 

@@ -44,7 +44,6 @@ func testGetIFPresent(t *testing.T, evT string) {
 		EvictType(evT).
 		LoaderFunc(
 			func(key interface{}) (interface{}, error) {
-				time.Sleep(time.Millisecond)
 				return "value", nil
 			}).
 		Build()

@@ -66,7 +66,7 @@ func (c *LFUCache) set(key, value interface{}) (interface{}, error) {
 	}
 
 	if c.addedFunc != nil {
-		(*c.addedFunc)(key, value)
+		c.addedFunc(key, value)
 	}
 
 	return item, nil
@@ -208,7 +208,7 @@ func (c *LFUCache) removeItem(item *lfuItem) {
 	delete(c.items, item.key)
 	delete(item.freqElement.Value.(*freqEntry).items, item)
 	if c.evictedFunc != nil {
-		(*c.evictedFunc)(item.key, item.value)
+		c.evictedFunc(item.key, item.value)
 	}
 }
 

@@ -49,7 +49,7 @@ func (c *ARC) replace(key interface{}) {
 	if ok {
 		delete(c.items, old)
 		if c.evictedFunc != nil {
-			(*c.evictedFunc)(item.key, item.value)
+			c.evictedFunc(item.key, item.value)
 		}
 	}
 }
@@ -79,7 +79,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 
 	defer func() {
 		if c.addedFunc != nil {
-			(*c.addedFunc)(key, value)
+			c.addedFunc(key, value)
 		}
 	}()
 
@@ -113,7 +113,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 			if ok {
 				delete(c.items, pop)
 				if c.evictedFunc != nil {
-					(*c.evictedFunc)(item.key, item.value)
+					c.evictedFunc(item.key, item.value)
 				}
 			}
 		}
@@ -166,7 +166,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			delete(c.items, key)
 			c.b1.PushFront(key)
 			if c.evictedFunc != nil {
-				(*c.evictedFunc)(item.key, item.value)
+				c.evictedFunc(item.key, item.value)
 			}
 		}
 	}
@@ -183,7 +183,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			c.t2.Remove(key, elt)
 			c.b2.PushFront(key)
 			if c.evictedFunc != nil {
-				(*c.evictedFunc)(item.key, item.value)
+				c.evictedFunc(item.key, item.value)
 			}
 		}
 	}
@@ -233,7 +233,7 @@ func (c *ARC) remove(key interface{}) bool {
 		v := elt.Value.(*arcItem).value
 		c.t1.Remove(key, elt)
 		if c.evictedFunc != nil {
-			(*c.evictedFunc)(key, v)
+			c.evictedFunc(key, v)
 		}
 		return true
 	}
@@ -242,7 +242,7 @@ func (c *ARC) remove(key interface{}) bool {
 		v := elt.Value.(*arcItem).value
 		c.t2.Remove(key, elt)
 		if c.evictedFunc != nil {
-			(*c.evictedFunc)(key, v)
+			c.evictedFunc(key, v)
 		}
 		return true
 	}
