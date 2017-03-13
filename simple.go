@@ -1,8 +1,6 @@
 package gcache
 
-import (
-	"time"
-)
+import "time"
 
 // SimpleCache has no clear priority for evict cache. It depends on key-value map order.
 type SimpleCache struct {
@@ -24,13 +22,22 @@ func (c *SimpleCache) init() {
 }
 
 // set a new key-value pair
-func (c *SimpleCache) Set(key, value interface{}) {
+func (c *SimpleCache) Set(key, value interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.set(key, value)
+	_, err := c.set(key, value)
+	return err
 }
 
 func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
+	var err error
+	if c.setterFunc != nil {
+		value, err = c.setterFunc(key, value)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Check for existing item
 	item, ok := c.items[key]
 	if ok {
@@ -63,10 +70,10 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 // generate a value using `LoaderFunc` method returns value.
 func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
 	v, err := c.getValue(key)
-	if err != nil {
+	if err == KeyNotFoundError {
 		return c.getWithLoader(key, true)
 	}
-	return v, nil
+	return v, err
 }
 
 // Get a value from cache pool using key if it exists.
@@ -74,7 +81,7 @@ func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
 	v, err := c.getValue(key)
-	if err != nil {
+	if err == KeyNotFoundError {
 		return c.getWithLoader(key, false)
 	}
 	return v, nil
@@ -106,25 +113,39 @@ func (c *SimpleCache) getValue(key interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return it.(*simpleItem).value, nil
+	v := it.(*simpleItem).value
+	if c.getterFunc != nil {
+		return c.getterFunc(key, v)
+	}
+	return v, nil
 }
 
 func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	if c.loaderFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	it, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
-		if e == nil {
-			c.mu.Lock()
-			defer c.mu.Unlock()
-			return c.set(key, v)
+	value, _, err := c.load(key, func(v interface{}, e error) (interface{}, error) {
+		if e != nil {
+			return nil, e
 		}
-		return nil, e
+		c.mu.Lock()
+		it, err := c.set(key, v)
+		if err != nil {
+			c.mu.Unlock()
+			return nil, err
+		}
+		v = it.(*simpleItem).value
+		if c.getterFunc == nil {
+			c.mu.Unlock()
+			return v, nil
+		}
+		c.mu.Unlock()
+		return c.getterFunc(key, v)
 	}, isWait)
 	if err != nil {
 		return nil, err
 	}
-	return it.(*simpleItem).value, nil
+	return value, nil
 }
 
 func (c *SimpleCache) evict(count int) {

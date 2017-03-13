@@ -16,7 +16,7 @@ const (
 var KeyNotFoundError = errors.New("Key not found.")
 
 type Cache interface {
-	Set(interface{}, interface{})
+	Set(interface{}, interface{}) error
 	Get(interface{}) (interface{}, error)
 	GetIFPresent(interface{}) (interface{}, error)
 	GetALL() map[interface{}]interface{}
@@ -34,17 +34,21 @@ type baseCache struct {
 	loaderFunc  LoaderFunc
 	evictedFunc EvictedFunc
 	addedFunc   AddedFunc
+	getterFunc  GetterFunc
+	setterFunc  SetterFunc
 	expiration  *time.Duration
 	mu          sync.RWMutex
 	loadGroup   Group
 	*stats
 }
 
-type LoaderFunc func(interface{}) (interface{}, error)
-
-type EvictedFunc func(interface{}, interface{})
-
-type AddedFunc func(interface{}, interface{})
+type (
+	LoaderFunc  func(interface{}) (interface{}, error)
+	EvictedFunc func(interface{}, interface{})
+	AddedFunc   func(interface{}, interface{})
+	GetterFunc  func(interface{}, interface{}) (interface{}, error)
+	SetterFunc  func(interface{}, interface{}) (interface{}, error)
+)
 
 type CacheBuilder struct {
 	tp          string
@@ -53,6 +57,8 @@ type CacheBuilder struct {
 	evictedFunc EvictedFunc
 	addedFunc   AddedFunc
 	expiration  *time.Duration
+	getterFunc  GetterFunc
+	setterFunc  SetterFunc
 }
 
 func New(size int) *CacheBuilder {
@@ -103,6 +109,16 @@ func (cb *CacheBuilder) AddedFunc(addedFunc AddedFunc) *CacheBuilder {
 	return cb
 }
 
+func (cb *CacheBuilder) GetterFunc(getterFunc GetterFunc) *CacheBuilder {
+	cb.getterFunc = getterFunc
+	return cb
+}
+
+func (cb *CacheBuilder) SetterFunc(setterFunc SetterFunc) *CacheBuilder {
+	cb.setterFunc = setterFunc
+	return cb
+}
+
 func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 	cb.expiration = &expiration
 	return cb
@@ -132,6 +148,8 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.loaderFunc = cb.loaderFunc
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
+	c.getterFunc = cb.getterFunc
+	c.setterFunc = cb.setterFunc
 	c.evictedFunc = cb.evictedFunc
 	c.stats = &stats{}
 }
