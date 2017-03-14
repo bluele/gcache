@@ -30,35 +30,35 @@ type Cache interface {
 }
 
 type baseCache struct {
-	size        int
-	loaderFunc  LoaderFunc
-	evictedFunc EvictedFunc
-	addedFunc   AddedFunc
-	getterFunc  GetterFunc
-	setterFunc  SetterFunc
-	expiration  *time.Duration
-	mu          sync.RWMutex
-	loadGroup   Group
+	size            int
+	loaderFunc      LoaderFunc
+	evictedFunc     EvictedFunc
+	addedFunc       AddedFunc
+	deserializeFunc DeserializeFunc
+	serializeFunc   SerializeFunc
+	expiration      *time.Duration
+	mu              sync.RWMutex
+	loadGroup       Group
 	*stats
 }
 
 type (
-	LoaderFunc  func(interface{}) (interface{}, error)
-	EvictedFunc func(interface{}, interface{})
-	AddedFunc   func(interface{}, interface{})
-	GetterFunc  func(interface{}, interface{}) (interface{}, error)
-	SetterFunc  func(interface{}, interface{}) (interface{}, error)
+	LoaderFunc      func(interface{}) (interface{}, error)
+	EvictedFunc     func(interface{}, interface{})
+	AddedFunc       func(interface{}, interface{})
+	DeserializeFunc func(interface{}, interface{}) (interface{}, error)
+	SerializeFunc   func(interface{}, interface{}) (interface{}, error)
 )
 
 type CacheBuilder struct {
-	tp          string
-	size        int
-	loaderFunc  LoaderFunc
-	evictedFunc EvictedFunc
-	addedFunc   AddedFunc
-	expiration  *time.Duration
-	getterFunc  GetterFunc
-	setterFunc  SetterFunc
+	tp              string
+	size            int
+	loaderFunc      LoaderFunc
+	evictedFunc     EvictedFunc
+	addedFunc       AddedFunc
+	expiration      *time.Duration
+	deserializeFunc DeserializeFunc
+	serializeFunc   SerializeFunc
 }
 
 func New(size int) *CacheBuilder {
@@ -109,13 +109,13 @@ func (cb *CacheBuilder) AddedFunc(addedFunc AddedFunc) *CacheBuilder {
 	return cb
 }
 
-func (cb *CacheBuilder) GetterFunc(getterFunc GetterFunc) *CacheBuilder {
-	cb.getterFunc = getterFunc
+func (cb *CacheBuilder) DeserializeFunc(deserializeFunc DeserializeFunc) *CacheBuilder {
+	cb.deserializeFunc = deserializeFunc
 	return cb
 }
 
-func (cb *CacheBuilder) SetterFunc(setterFunc SetterFunc) *CacheBuilder {
-	cb.setterFunc = setterFunc
+func (cb *CacheBuilder) SerializeFunc(serializeFunc SerializeFunc) *CacheBuilder {
+	cb.serializeFunc = serializeFunc
 	return cb
 }
 
@@ -148,8 +148,8 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.loaderFunc = cb.loaderFunc
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
-	c.getterFunc = cb.getterFunc
-	c.setterFunc = cb.setterFunc
+	c.deserializeFunc = cb.deserializeFunc
+	c.serializeFunc = cb.serializeFunc
 	c.evictedFunc = cb.evictedFunc
 	c.stats = &stats{}
 }

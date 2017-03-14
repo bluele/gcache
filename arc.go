@@ -63,8 +63,8 @@ func (c *ARC) Set(key, value interface{}) error {
 
 func (c *ARC) set(key, value interface{}) (interface{}, error) {
 	var err error
-	if c.setterFunc != nil {
-		value, err = c.setterFunc(key, value)
+	if c.serializeFunc != nil {
+		value, err = c.serializeFunc(key, value)
 		if err != nil {
 			return nil, err
 		}
@@ -209,8 +209,8 @@ func (c *ARC) getValue(key interface{}) (interface{}, error) {
 		return nil, err
 	}
 	v := it.(*arcItem).value
-	if c.getterFunc != nil {
-		return c.getterFunc(key, v)
+	if c.deserializeFunc != nil {
+		return c.deserializeFunc(key, v)
 	}
 	return v, nil
 }
@@ -224,18 +224,12 @@ func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 			return nil, e
 		}
 		c.mu.Lock()
-		it, err := c.set(key, v)
+		_, err := c.set(key, v)
+		defer c.mu.Unlock()
 		if err != nil {
-			c.mu.Unlock()
 			return nil, err
 		}
-		v = it.(*arcItem).value
-		if c.getterFunc == nil {
-			c.mu.Unlock()
-			return v, nil
-		}
-		c.mu.Unlock()
-		return c.getterFunc(key, v)
+		return v, nil
 	}, isWait)
 	if err != nil {
 		return nil, err

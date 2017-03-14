@@ -28,8 +28,8 @@ func (c *LRUCache) init() {
 
 func (c *LRUCache) set(key, value interface{}) (interface{}, error) {
 	var err error
-	if c.setterFunc != nil {
-		value, err = c.setterFunc(key, value)
+	if c.serializeFunc != nil {
+		value, err = c.serializeFunc(key, value)
 		if err != nil {
 			return nil, err
 		}
@@ -127,8 +127,8 @@ func (c *LRUCache) getValue(key interface{}) (interface{}, error) {
 		return nil, err
 	}
 	v := it.(*lruItem).value
-	if c.getterFunc != nil {
-		return c.getterFunc(key, v)
+	if c.deserializeFunc != nil {
+		return c.deserializeFunc(key, v)
 	}
 	return v, nil
 }
@@ -142,18 +142,12 @@ func (c *LRUCache) getWithLoader(key interface{}, isWait bool) (interface{}, err
 			return nil, e
 		}
 		c.mu.Lock()
-		it, err := c.set(key, v)
+		_, err := c.set(key, v)
+		defer c.mu.Unlock()
 		if err != nil {
-			c.mu.Unlock()
 			return nil, err
 		}
-		v = it.(*lruItem).value
-		if c.getterFunc == nil {
-			c.mu.Unlock()
-			return v, nil
-		}
-		c.mu.Unlock()
-		return c.getterFunc(key, v)
+		return v, nil
 	}, isWait)
 	if err != nil {
 		return nil, err

@@ -51,7 +51,7 @@ func TestLoaderFunc(t *testing.T) {
 	}
 }
 
-func TestGetterFunc(t *testing.T) {
+func TestDeserializeFunc(t *testing.T) {
 	var cases = []struct {
 		tp string
 	}{
@@ -69,7 +69,7 @@ func TestGetterFunc(t *testing.T) {
 			LoaderFunc(func(k interface{}) (interface{}, error) {
 				return value1, nil
 			}).
-			GetterFunc(func(k, v interface{}) (interface{}, error) {
+			DeserializeFunc(func(k, v interface{}) (interface{}, error) {
 				dec := gob.NewDecoder(bytes.NewBuffer(v.([]byte)))
 				var str string
 				err := dec.Decode(&str)
@@ -78,7 +78,7 @@ func TestGetterFunc(t *testing.T) {
 				}
 				return str, nil
 			}).
-			SetterFunc(func(k, v interface{}) (interface{}, error) {
+			SerializeFunc(func(k, v interface{}) (interface{}, error) {
 				buf := new(bytes.Buffer)
 				enc := gob.NewEncoder(buf)
 				err := enc.Encode(v)
