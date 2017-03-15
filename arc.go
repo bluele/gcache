@@ -141,7 +141,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 
 // Get a value from cache pool using key if it exists. If not exists and it has LoaderFunc, it will generate the value using you have specified LoaderFunc method returns value.
 func (c *ARC) Get(key interface{}) (interface{}, error) {
-	v, err := c.getValue(key)
+	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
 		return c.getWithLoader(key, true)
 	}
@@ -152,7 +152,7 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 // If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
-	v, err := c.getValue(key)
+	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
 		return c.getWithLoader(key, false)
 	}
@@ -160,6 +160,17 @@ func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
 }
 
 func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
+	v, err := c.getValue(key, onLoad)
+	if err != nil {
+		return nil, err
+	}
+	if c.deserializeFunc != nil {
+		return c.deserializeFunc(key, v)
+	}
+	return v, nil
+}
+
+func (c *ARC) getValue(key interface{}, onLoad bool) (interface{}, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if elt := c.t1.Lookup(key); elt != nil {
@@ -201,17 +212,6 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 		c.stats.IncrMissCount()
 	}
 	return nil, KeyNotFoundError
-}
-
-func (c *ARC) getValue(key interface{}) (interface{}, error) {
-	v, err := c.get(key, false)
-	if err != nil {
-		return nil, err
-	}
-	if c.deserializeFunc != nil {
-		return c.deserializeFunc(key, v)
-	}
-	return v, nil
 }
 
 func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {

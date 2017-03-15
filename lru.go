@@ -77,7 +77,7 @@ func (c *LRUCache) Set(key, value interface{}) error {
 // If it dose not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
 func (c *LRUCache) Get(key interface{}) (interface{}, error) {
-	v, err := c.getValue(key)
+	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
 		return c.getWithLoader(key, true)
 	}
@@ -88,7 +88,7 @@ func (c *LRUCache) Get(key interface{}) (interface{}, error) {
 // If it dose not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *LRUCache) GetIFPresent(key interface{}) (interface{}, error) {
-	v, err := c.getValue(key)
+	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
 		return c.getWithLoader(key, false)
 	}
@@ -96,6 +96,17 @@ func (c *LRUCache) GetIFPresent(key interface{}) (interface{}, error) {
 }
 
 func (c *LRUCache) get(key interface{}, onLoad bool) (interface{}, error) {
+	v, err := c.getValue(key, onLoad)
+	if err != nil {
+		return nil, err
+	}
+	if c.deserializeFunc != nil {
+		return c.deserializeFunc(key, v)
+	}
+	return v, nil
+}
+
+func (c *LRUCache) getValue(key interface{}, onLoad bool) (interface{}, error) {
 	c.mu.RLock()
 	item, ok := c.items[key]
 	c.mu.RUnlock()
@@ -119,17 +130,6 @@ func (c *LRUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 		c.stats.IncrMissCount()
 	}
 	return nil, KeyNotFoundError
-}
-
-func (c *LRUCache) getValue(key interface{}) (interface{}, error) {
-	v, err := c.get(key, false)
-	if err != nil {
-		return nil, err
-	}
-	if c.deserializeFunc != nil {
-		return c.deserializeFunc(key, v)
-	}
-	return v, nil
 }
 
 func (c *LRUCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
