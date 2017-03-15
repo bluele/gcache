@@ -96,7 +96,7 @@ func (c *SimpleCache) get(key interface{}, onLoad bool) (interface{}, error) {
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return item, nil
+			return item.value, nil
 		}
 		c.mu.Lock()
 		c.remove(key)
@@ -109,11 +109,10 @@ func (c *SimpleCache) get(key interface{}, onLoad bool) (interface{}, error) {
 }
 
 func (c *SimpleCache) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key, false)
+	v, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}
-	v := it.(*simpleItem).value
 	if c.deserializeFunc != nil {
 		return c.deserializeFunc(key, v)
 	}

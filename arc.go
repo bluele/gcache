@@ -170,7 +170,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return item, nil
+			return item.value, nil
 		} else {
 			delete(c.items, key)
 			c.b1.PushFront(key)
@@ -186,7 +186,7 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return item, nil
+			return item.value, nil
 		} else {
 			delete(c.items, key)
 			c.t2.Remove(key, elt)
@@ -204,11 +204,10 @@ func (c *ARC) get(key interface{}, onLoad bool) (interface{}, error) {
 }
 
 func (c *ARC) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key, false)
+	v, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}
-	v := it.(*arcItem).value
 	if c.deserializeFunc != nil {
 		return c.deserializeFunc(key, v)
 	}
