@@ -109,7 +109,7 @@ func (c *LRUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return it, nil
+			return it.value, nil
 		}
 		c.mu.Lock()
 		c.removeElement(item)
@@ -122,11 +122,10 @@ func (c *LRUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 }
 
 func (c *LRUCache) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key, false)
+	v, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}
-	v := it.(*lruItem).value
 	if c.deserializeFunc != nil {
 		return c.deserializeFunc(key, v)
 	}

@@ -116,7 +116,7 @@ func (c *LFUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return item, nil
+			return item.value, nil
 		}
 		c.mu.Lock()
 		c.removeItem(item)
@@ -129,11 +129,10 @@ func (c *LFUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 }
 
 func (c *LFUCache) getValue(key interface{}) (interface{}, error) {
-	it, err := c.get(key, false)
+	v, err := c.get(key, false)
 	if err != nil {
 		return nil, err
 	}
-	v := it.(*lfuItem).value
 	if c.deserializeFunc != nil {
 		return c.deserializeFunc(key, v)
 	}
