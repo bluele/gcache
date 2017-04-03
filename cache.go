@@ -17,6 +17,7 @@ var KeyNotFoundError = errors.New("Key not found.")
 
 type Cache interface {
 	Set(interface{}, interface{}) error
+	SetWithExpire(interface{}, interface{}, time.Duration) error
 	Get(interface{}) (interface{}, error)
 	GetIFPresent(interface{}) (interface{}, error)
 	GetALL() map[interface{}]interface{}
