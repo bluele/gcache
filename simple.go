@@ -21,12 +21,26 @@ func (c *SimpleCache) init() {
 	c.items = make(map[interface{}]*simpleItem, c.size)
 }
 
-// set a new key-value pair
+// Set a new key-value pair
 func (c *SimpleCache) Set(key, value interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	_, err := c.set(key, value)
 	return err
+}
+
+// Set a new key-value pair with an expiration time
+func (c *SimpleCache) SetWithExpire(key, value interface{}, expiration time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	item, err := c.set(key, value)
+	if err != nil {
+		return err
+	}
+
+	t := time.Now().Add(expiration)
+	item.(*simpleItem).expiration = &t
+	return nil
 }
 
 func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
