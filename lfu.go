@@ -30,12 +30,26 @@ func (c *LFUCache) init() {
 	})
 }
 
-// set a new key-value pair
+// Set a new key-value pair
 func (c *LFUCache) Set(key, value interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	_, err := c.set(key, value)
 	return err
+}
+
+// Set a new key-value pair with an expiration time
+func (c *LFUCache) SetWithExpire(key, value interface{}, expiration time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	item, err := c.set(key, value)
+	if err != nil {
+		return err
+	}
+
+	t := time.Now().Add(expiration)
+	item.(*lfuItem).expiration = &t
+	return nil
 }
 
 func (c *LFUCache) set(key, value interface{}) (interface{}, error) {
