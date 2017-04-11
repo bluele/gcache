@@ -246,19 +246,23 @@ func (c *ARC) Remove(key interface{}) bool {
 
 func (c *ARC) remove(key interface{}) bool {
 	if elt := c.t1.Lookup(key); elt != nil {
-		v := elt.Value.(*arcItem).value
 		c.t1.Remove(key, elt)
+		item := c.items[key]
+		delete(c.items, key)
+		c.b1.PushFront(key)
 		if c.evictedFunc != nil {
-			c.evictedFunc(key, v)
+			c.evictedFunc(key, item.value)
 		}
 		return true
 	}
 
 	if elt := c.t2.Lookup(key); elt != nil {
-		v := elt.Value.(*arcItem).value
 		c.t2.Remove(key, elt)
+		item := c.items[key]
+		delete(c.items, key)
+		c.b2.PushFront(key)
 		if c.evictedFunc != nil {
-			c.evictedFunc(key, v)
+			c.evictedFunc(key, item.value)
 		}
 		return true
 	}
