@@ -61,6 +61,20 @@ func (c *ARC) Set(key, value interface{}) error {
 	return err
 }
 
+// Set a new key-value pair with an expiration time
+func (c *ARC) SetWithExpire(key, value interface{}, expiration time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	item, err := c.set(key, value)
+	if err != nil {
+		return err
+	}
+
+	t := time.Now().Add(expiration)
+	item.(*arcItem).expiration = &t
+	return nil
+}
+
 func (c *ARC) set(key, value interface{}) (interface{}, error) {
 	var err error
 	if c.serializeFunc != nil {

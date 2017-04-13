@@ -73,6 +73,20 @@ func (c *LRUCache) Set(key, value interface{}) error {
 	return err
 }
 
+// Set a new key-value pair with an expiration time
+func (c *LRUCache) SetWithExpire(key, value interface{}, expiration time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	item, err := c.set(key, value)
+	if err != nil {
+		return err
+	}
+
+	t := time.Now().Add(expiration)
+	item.(*lruItem).expiration = &t
+	return nil
+}
+
 // Get a value from cache pool using key if it exists.
 // If it dose not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
