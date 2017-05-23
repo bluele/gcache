@@ -1,6 +1,10 @@
 package gcache
 
-import "time"
+import (
+	"time"
+
+	"github.com/jonboulle/clockwork"
+)
 
 // SimpleCache has no clear priority for evict cache. It depends on key-value map order.
 type SimpleCache struct {
@@ -38,7 +42,7 @@ func (c *SimpleCache) SetWithExpire(key, value interface{}, expiration time.Dura
 		return err
 	}
 
-	t := time.Now().Add(expiration)
+	t := c.clock.Now().Add(expiration)
 	item.(*simpleItem).expiration = &t
 	return nil
 }
@@ -63,12 +67,13 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 		}
 		item = &simpleItem{
 			value: value,
+			clock: c.clock,
 		}
 		c.items[key] = item
 	}
 
 	if c.expiration != nil {
-		t := time.Now().Add(*c.expiration)
+		t := c.clock.Now().Add(*c.expiration)
 		item.expiration = &t
 	}
 
@@ -156,7 +161,7 @@ func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, 
 }
 
 func (c *SimpleCache) evict(count int) {
-	now := time.Now()
+	now := c.clock.Now()
 	current := 0
 	for key, item := range c.items {
 		if current >= count {
@@ -241,6 +246,7 @@ func (c *SimpleCache) Purge() {
 
 type simpleItem struct {
 	value      interface{}
+	clock      clockwork.Clock
 	expiration *time.Time
 }
 
@@ -250,7 +256,7 @@ func (si *simpleItem) IsExpired(now *time.Time) bool {
 		return false
 	}
 	if now == nil {
-		t := time.Now()
+		t := si.clock.Now()
 		now = &t
 	}
 	return si.expiration.Before(*now)

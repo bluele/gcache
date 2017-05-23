@@ -4,6 +4,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 const (
@@ -31,6 +33,7 @@ type Cache interface {
 }
 
 type baseCache struct {
+	clock           clockwork.Clock
 	size            int
 	loaderFunc      LoaderFunc
 	evictedFunc     EvictedFunc
@@ -52,6 +55,7 @@ type (
 )
 
 type CacheBuilder struct {
+	clock           clockwork.Clock
 	tp              string
 	size            int
 	loaderFunc      LoaderFunc
@@ -67,8 +71,9 @@ func New(size int) *CacheBuilder {
 		panic("gcache: size <= 0")
 	}
 	return &CacheBuilder{
-		tp:   TYPE_SIMPLE,
-		size: size,
+		clock: clockwork.NewRealClock(),
+		tp:    TYPE_SIMPLE,
+		size:  size,
 	}
 }
 
@@ -125,6 +130,11 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 	return cb
 }
 
+func (cb *CacheBuilder) Clock(clock clockwork.Clock) *CacheBuilder {
+	cb.clock = clock
+	return cb
+}
+
 func (cb *CacheBuilder) Build() Cache {
 	return cb.build()
 }
@@ -145,6 +155,7 @@ func (cb *CacheBuilder) build() Cache {
 }
 
 func buildCache(c *baseCache, cb *CacheBuilder) {
+	c.clock = cb.clock
 	c.size = cb.size
 	c.loaderFunc = cb.loaderFunc
 	c.expiration = cb.expiration

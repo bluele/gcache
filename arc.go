@@ -3,6 +3,8 @@ package gcache
 import (
 	"container/list"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 // Constantly balances between LRU and LFU, to improve the combined result.
@@ -70,7 +72,7 @@ func (c *ARC) SetWithExpire(key, value interface{}, expiration time.Duration) er
 		return err
 	}
 
-	t := time.Now().Add(expiration)
+	t := c.clock.Now().Add(expiration)
 	item.(*arcItem).expiration = &t
 	return nil
 }
@@ -91,12 +93,13 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 		item = &arcItem{
 			key:   key,
 			value: value,
+			clock: c.clock,
 		}
 		c.items[key] = item
 	}
 
 	if c.expiration != nil {
-		t := time.Now().Add(*c.expiration)
+		t := c.clock.Now().Add(*c.expiration)
 		item.expiration = &t
 	}
 
@@ -339,7 +342,7 @@ func (it *arcItem) IsExpired(now *time.Time) bool {
 		return false
 	}
 	if now == nil {
-		t := time.Now()
+		t := it.clock.Now()
 		now = &t
 	}
 	return it.expiration.Before(*now)
@@ -353,6 +356,7 @@ type arcList struct {
 type arcItem struct {
 	key        interface{}
 	value      interface{}
+	clock      clockwork.Clock
 	expiration *time.Time
 }
 

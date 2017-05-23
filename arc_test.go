@@ -1,30 +1,31 @@
-package gcache_test
+package gcache
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/bluele/gcache"
+	"github.com/jonboulle/clockwork"
 )
 
-func buildARCache(size int) gcache.Cache {
-	return gcache.New(size).
+func buildARCache(size int) Cache {
+	return New(size).
 		ARC().
 		EvictedFunc(evictedFuncForARC).
 		Build()
 }
 
-func buildLoadingARCache(size int) gcache.Cache {
-	return gcache.New(size).
+func buildLoadingARCache(size int) Cache {
+	return New(size).
 		ARC().
 		LoaderFunc(loader).
 		EvictedFunc(evictedFuncForARC).
 		Build()
 }
 
-func buildLoadingARCacheWithExpiration(size int, ep time.Duration) gcache.Cache {
-	return gcache.New(size).
+func buildLoadingARCacheWithExpiration(clock clockwork.Clock, size int, ep time.Duration) Cache {
+	return New(size).
+		Clock(clock).
 		ARC().
 		Expiration(ep).
 		LoaderFunc(loader).
@@ -50,7 +51,9 @@ func TestLoadingARCGet(t *testing.T) {
 }
 
 func TestARCLength(t *testing.T) {
-	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
+	fakeClock := clockwork.NewFakeClock()
+	expTime := 5 * time.Minute
+	gc := buildLoadingARCacheWithExpiration(fakeClock, 2, expTime)
 	gc.Get("test1")
 	gc.Get("test2")
 	gc.Get("test3")
@@ -59,7 +62,9 @@ func TestARCLength(t *testing.T) {
 	if length != expectedLength {
 		t.Errorf("Expected length is %v, not %v", expectedLength, length)
 	}
-	time.Sleep(time.Millisecond)
+
+	// Advance the clock past the expiration time
+	fakeClock.Advance(expTime + time.Second)
 	gc.Get("test4")
 	length = gc.Len()
 	expectedLength = 1
@@ -82,9 +87,9 @@ func TestARCEvictItem(t *testing.T) {
 }
 
 func TestARCGetIFPresent(t *testing.T) {
-	testGetIFPresent(t, gcache.TYPE_ARC)
+	testGetIFPresent(t, TYPE_ARC)
 }
 
 func TestARCGetALL(t *testing.T) {
-	testGetALL(t, gcache.TYPE_ARC)
+	testGetALL(t, TYPE_ARC)
 }

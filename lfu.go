@@ -3,6 +3,8 @@ package gcache
 import (
 	"container/list"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 // Discards the least frequently used items first.
@@ -47,7 +49,7 @@ func (c *LFUCache) SetWithExpire(key, value interface{}, expiration time.Duratio
 		return err
 	}
 
-	t := time.Now().Add(expiration)
+	t := c.clock.Now().Add(expiration)
 	item.(*lfuItem).expiration = &t
 	return nil
 }
@@ -74,6 +76,7 @@ func (c *LFUCache) set(key, value interface{}) (interface{}, error) {
 			key:         key,
 			value:       value,
 			freqElement: nil,
+			clock:       c.clock,
 		}
 		el := c.freqList.Front()
 		fe := el.Value.(*freqEntry)
@@ -84,7 +87,7 @@ func (c *LFUCache) set(key, value interface{}) (interface{}, error) {
 	}
 
 	if c.expiration != nil {
-		t := time.Now().Add(*c.expiration)
+		t := c.clock.Now().Add(*c.expiration)
 		item.expiration = &t
 	}
 
@@ -294,6 +297,7 @@ type lfuItem struct {
 	key         interface{}
 	value       interface{}
 	freqElement *list.Element
+	clock       clockwork.Clock
 	expiration  *time.Time
 }
 
@@ -303,7 +307,7 @@ func (it *lfuItem) IsExpired(now *time.Time) bool {
 		return false
 	}
 	if now == nil {
-		t := time.Now()
+		t := it.clock.Now()
 		now = &t
 	}
 	return it.expiration.Before(*now)

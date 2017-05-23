@@ -3,6 +3,8 @@ package gcache
 import (
 	"container/list"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 // Discards the least recently used items first.
@@ -49,12 +51,13 @@ func (c *LRUCache) set(key, value interface{}) (interface{}, error) {
 		item = &lruItem{
 			key:   key,
 			value: value,
+			clock: c.clock,
 		}
 		c.items[key] = c.evictList.PushFront(item)
 	}
 
 	if c.expiration != nil {
-		t := time.Now().Add(*c.expiration)
+		t := c.clock.Now().Add(*c.expiration)
 		item.expiration = &t
 	}
 
@@ -82,7 +85,7 @@ func (c *LRUCache) SetWithExpire(key, value interface{}, expiration time.Duratio
 		return err
 	}
 
-	t := time.Now().Add(expiration)
+	t := c.clock.Now().Add(expiration)
 	item.(*lruItem).expiration = &t
 	return nil
 }
@@ -258,6 +261,7 @@ func (c *LRUCache) Purge() {
 type lruItem struct {
 	key        interface{}
 	value      interface{}
+	clock      clockwork.Clock
 	expiration *time.Time
 }
 
@@ -267,7 +271,7 @@ func (it *lruItem) IsExpired(now *time.Time) bool {
 		return false
 	}
 	if now == nil {
-		t := time.Now()
+		t := it.clock.Now()
 		now = &t
 	}
 	return it.expiration.Before(*now)
