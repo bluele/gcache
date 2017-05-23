@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "bz+hbEtuZsntWgYkShEoFuieR4I=",
+			"path": "github.com/bluele/gcache",
+			"revision": "b9993a9fff7b10a1fd0404d8aa4a039cb625534d",
+			"revisionTime": "2017-04-13T07:40:36Z"
+		},
+		{
+			"checksumSHA1": "SGc5vSs9tXhrGJ5ncymDyMvTg24=",
+			"path": "github.com/jonboulle/clockwork",
+			"revision": "bcac9884e7502bb2b474c0339d889cb981a2f27f",
+			"revisionTime": "2016-09-07T12:20:59Z"
+		}
+	],
+	"rootPath": "github.com/pcman312/gcache"
+}
