@@ -84,7 +84,8 @@ func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
 }
 
 // Set a loader function with expiration.
-// loaderFunc: create a new value with this function if cached value is expired.
+// loaderExpireFunc: create a new value with this function if cached value is expired.
+// If nil returned instead of time.Duration from loaderExpireFunc than value will never expire.
 func (cb *CacheBuilder) LoaderExpireFunc(loaderExpireFunc LoaderExpireFunc) *CacheBuilder {
 	cb.loaderExpireFunc = loaderExpireFunc
 	return cb
