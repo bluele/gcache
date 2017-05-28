@@ -31,35 +31,36 @@ type Cache interface {
 }
 
 type baseCache struct {
-	size            int
-	loaderFunc      LoaderFunc
-	evictedFunc     EvictedFunc
-	addedFunc       AddedFunc
-	deserializeFunc DeserializeFunc
-	serializeFunc   SerializeFunc
-	expiration      *time.Duration
-	mu              sync.RWMutex
-	loadGroup       Group
+	size             int
+	loaderExpireFunc LoaderExpireFunc
+	evictedFunc      EvictedFunc
+	addedFunc        AddedFunc
+	deserializeFunc  DeserializeFunc
+	serializeFunc    SerializeFunc
+	expiration       *time.Duration
+	mu               sync.RWMutex
+	loadGroup        Group
 	*stats
 }
 
 type (
-	LoaderFunc      func(interface{}) (interface{}, error)
-	EvictedFunc     func(interface{}, interface{})
-	AddedFunc       func(interface{}, interface{})
-	DeserializeFunc func(interface{}, interface{}) (interface{}, error)
-	SerializeFunc   func(interface{}, interface{}) (interface{}, error)
+	LoaderFunc       func(interface{}) (interface{}, error)
+	LoaderExpireFunc func(interface{}) (interface{}, *time.Duration, error)
+	EvictedFunc      func(interface{}, interface{})
+	AddedFunc        func(interface{}, interface{})
+	DeserializeFunc  func(interface{}, interface{}) (interface{}, error)
+	SerializeFunc    func(interface{}, interface{}) (interface{}, error)
 )
 
 type CacheBuilder struct {
-	tp              string
-	size            int
-	loaderFunc      LoaderFunc
-	evictedFunc     EvictedFunc
-	addedFunc       AddedFunc
-	expiration      *time.Duration
-	deserializeFunc DeserializeFunc
-	serializeFunc   SerializeFunc
+	tp               string
+	size             int
+	loaderExpireFunc LoaderExpireFunc
+	evictedFunc      EvictedFunc
+	addedFunc        AddedFunc
+	expiration       *time.Duration
+	deserializeFunc  DeserializeFunc
+	serializeFunc    SerializeFunc
 }
 
 func New(size int) *CacheBuilder {
@@ -75,7 +76,18 @@ func New(size int) *CacheBuilder {
 // Set a loader function.
 // loaderFunc: create a new value with this function if cached value is expired.
 func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
-	cb.loaderFunc = loaderFunc
+	cb.loaderExpireFunc = func(k interface{}) (interface{}, *time.Duration, error) {
+		v, err := loaderFunc(k)
+		return v, nil, err
+	}
+	return cb
+}
+
+// Set a loader function with expiration.
+// loaderExpireFunc: create a new value with this function if cached value is expired.
+// If nil returned instead of time.Duration from loaderExpireFunc than value will never expire.
+func (cb *CacheBuilder) LoaderExpireFunc(loaderExpireFunc LoaderExpireFunc) *CacheBuilder {
+	cb.loaderExpireFunc = loaderExpireFunc
 	return cb
 }
 
@@ -146,7 +158,7 @@ func (cb *CacheBuilder) build() Cache {
 
 func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.size = cb.size
-	c.loaderFunc = cb.loaderFunc
+	c.loaderExpireFunc = cb.loaderExpireFunc
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
 	c.deserializeFunc = cb.deserializeFunc
@@ -156,9 +168,9 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 }
 
 // load a new value using by specified key.
-func (c *baseCache) load(key interface{}, cb func(interface{}, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
+func (c *baseCache) load(key interface{}, cb func(interface{}, *time.Duration, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
 	v, called, err := c.loadGroup.Do(key, func() (interface{}, error) {
-		return cb(c.loaderFunc(key))
+		return cb(c.loaderExpireFunc(key))
 	}, isWait)
 	if err != nil {
 		return nil, called, err

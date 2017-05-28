@@ -78,6 +78,48 @@ func main() {
 Get: ok
 ```
 
+### Automatically load value with expiration
+
+```go
+package main
+
+import (
+  "github.com/bluele/gcache"
+  "fmt"
+)
+
+func main() {
+  gc := gcache.New(20).
+    LRU().
+    LoaderExpireFunc(func(key interface{}) (interface{}, *time.Duration, error) {
+      expire := 1 * time.Second
+      return "ok", &expire,  nil
+    }).
+    EvictedFunc(func(key, value interface{}) {
+      fmt.Println("evicted key:", key)
+    }).
+    Build()
+  value, err := gc.Get("key")
+  if err != nil {
+    panic(err)
+  }
+  fmt.Println("Get:", value)
+  time.Sleep(1 * time.Second)
+  value, err := gc.Get("key")
+  if err != nil {
+    panic(err)
+  }
+  fmt.Println("Get:", value)
+}
+```
+
+```
+Get: ok
+evicted key: key
+Get: ok
+```
+
+
 ## Cache Algorithm
 
   * Least-Frequently Used (LFU)
