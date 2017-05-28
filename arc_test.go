@@ -88,3 +88,10 @@ func TestARCGetIFPresent(t *testing.T) {
 func TestARCGetALL(t *testing.T) {
 	testGetALL(t, gcache.TYPE_ARC)
 }
+
+func TestARCEvicted(t *testing.T) {
+	cache := gcache.New(1000).ARC().Expiration(0).Build()
+	cache.Set("foo", "bar")
+	cache.Get("foo")
+	cache.Set("foo", "bar")
+}
