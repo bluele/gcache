@@ -129,24 +129,21 @@ func (c *LFUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 }
 
 func (c *LFUCache) getValue(key interface{}, onLoad bool) (interface{}, error) {
-	c.mu.RLock()
+	c.mu.Lock()
 	item, ok := c.items[key]
-	c.mu.RUnlock()
-
 	if ok {
 		if !item.IsExpired(nil) {
-			c.mu.Lock()
 			c.increment(item)
+			v := item.value
 			c.mu.Unlock()
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return item.value, nil
+			return v, nil
 		}
-		c.mu.Lock()
 		c.removeItem(item)
-		c.mu.Unlock()
 	}
+	c.mu.Unlock()
 	if !onLoad {
 		c.stats.IncrMissCount()
 	}

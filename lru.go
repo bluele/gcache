@@ -121,25 +121,22 @@ func (c *LRUCache) get(key interface{}, onLoad bool) (interface{}, error) {
 }
 
 func (c *LRUCache) getValue(key interface{}, onLoad bool) (interface{}, error) {
-	c.mu.RLock()
+	c.mu.Lock()
 	item, ok := c.items[key]
-	c.mu.RUnlock()
-
 	if ok {
 		it := item.Value.(*lruItem)
 		if !it.IsExpired(nil) {
-			c.mu.Lock()
-			defer c.mu.Unlock()
 			c.evictList.MoveToFront(item)
+			v := it.value
+			c.mu.Unlock()
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return it.value, nil
+			return v, nil
 		}
-		c.mu.Lock()
 		c.removeElement(item)
-		c.mu.Unlock()
 	}
+	c.mu.Unlock()
 	if !onLoad {
 		c.stats.IncrMissCount()
 	}
