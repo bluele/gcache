@@ -1,21 +1,19 @@
-package gcache_test
+package gcache
 
 import (
 	"fmt"
 	"testing"
-
-	gcache "github.com/bluele/gcache"
 )
 
-func buildSimpleCache(size int) gcache.Cache {
-	return gcache.New(size).
+func buildSimpleCache(size int) Cache {
+	return New(size).
 		Simple().
 		EvictedFunc(evictedFuncForSimple).
 		Build()
 }
 
-func buildLoadingSimpleCache(size int, loader gcache.LoaderFunc) gcache.Cache {
-	return gcache.New(size).
+func buildLoadingSimpleCache(size int, loader LoaderFunc) Cache {
+	return New(size).
 		LoaderFunc(loader).
 		Simple().
 		EvictedFunc(evictedFuncForSimple).
@@ -64,9 +62,9 @@ func TestSimpleEvictItem(t *testing.T) {
 }
 
 func TestSimpleGetIFPresent(t *testing.T) {
-	testGetIFPresent(t, gcache.TYPE_SIMPLE)
+	testGetIFPresent(t, TYPE_SIMPLE)
 }
 
 func TestSimpleGetALL(t *testing.T) {
-	testGetALL(t, gcache.TYPE_SIMPLE)
+	testGetALL(t, TYPE_SIMPLE)
 }
