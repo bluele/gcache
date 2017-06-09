@@ -49,6 +49,43 @@ func main() {
 Get: ok
 ```
 
+### Manually set a key-value pair, with an expiration time.
+
+```go
+package main
+
+import (
+  "github.com/bluele/gcache"
+  "fmt"
+  "time"
+)
+
+func main() {
+  gc := gcache.New(20).
+    LRU().
+    Build()
+  gc.SetWithExpire("key", "ok", time.Second*10)
+  value, _ := gc.Get("key")
+  fmt.Println("Get:", value)
+
+  // Wait for value to expire
+  time.Sleep(time.Second*10)
+
+  value, err = gc.Get("key")
+  if err != nil {
+    panic(err)
+  }
+  fmt.Println("Get:", value)
+}
+```
+
+```
+Get: ok
+// 10 seconds later, new attempt:
+panic: ErrKeyNotFound
+```
+
+
 ### Automatically load value
 
 ```go
