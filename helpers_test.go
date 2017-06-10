@@ -1,18 +1,16 @@
-package gcache_test
+package gcache
 
 import (
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/bluele/gcache"
 )
 
 func loader(key interface{}) (interface{}, error) {
 	return fmt.Sprintf("valueFor%s", key), nil
 }
 
-func testSetCache(t *testing.T, gc gcache.Cache, numbers int) {
+func testSetCache(t *testing.T, gc Cache, numbers int) {
 	for i := 0; i < numbers; i++ {
 		key := fmt.Sprintf("Key-%d", i)
 		value, err := loader(key)
@@ -24,7 +22,7 @@ func testSetCache(t *testing.T, gc gcache.Cache, numbers int) {
 	}
 }
 
-func testGetCache(t *testing.T, gc gcache.Cache, numbers int) {
+func testGetCache(t *testing.T, gc Cache, numbers int) {
 	for i := 0; i < numbers; i++ {
 		key := fmt.Sprintf("Key-%d", i)
 		v, err := gc.Get(key)
@@ -39,17 +37,17 @@ func testGetCache(t *testing.T, gc gcache.Cache, numbers int) {
 }
 
 func testGetIFPresent(t *testing.T, evT string) {
-	cache := gcache.
+	cache :=
 		New(8).
-		EvictType(evT).
-		LoaderFunc(
-			func(key interface{}) (interface{}, error) {
-				return "value", nil
-			}).
-		Build()
+			EvictType(evT).
+			LoaderFunc(
+				func(key interface{}) (interface{}, error) {
+					return "value", nil
+				}).
+			Build()
 
 	v, err := cache.GetIFPresent("key")
-	if err != gcache.KeyNotFoundError {
+	if err != KeyNotFoundError {
 		t.Errorf("err should not be %v", err)
 	}
 
@@ -66,11 +64,11 @@ func testGetIFPresent(t *testing.T, evT string) {
 
 func testGetALL(t *testing.T, evT string) {
 	size := 8
-	cache := gcache.
+	cache :=
 		New(size).
-		Expiration(time.Millisecond).
-		EvictType(evT).
-		Build()
+			Expiration(time.Millisecond).
+			EvictType(evT).
+			Build()
 	for i := 0; i < size; i++ {
 		cache.Set(i, i*i)
 	}
