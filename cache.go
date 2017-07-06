@@ -66,9 +66,6 @@ type CacheBuilder struct {
 }
 
 func New(size int) *CacheBuilder {
-	if size <= 0 {
-		panic("gcache: size <= 0")
-	}
 	return &CacheBuilder{
 		clock: NewRealClock(),
 		tp:    TYPE_SIMPLE,
@@ -146,6 +143,10 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 }
 
 func (cb *CacheBuilder) Build() Cache {
+	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
+		panic("gcache: Cache size <= 0")
+	}
+
 	return cb.build()
 }
 
