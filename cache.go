@@ -2,6 +2,7 @@ package gcache
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -178,7 +179,12 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 
 // load a new value using by specified key.
 func (c *baseCache) load(key interface{}, cb func(interface{}, *time.Duration, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
-	v, called, err := c.loadGroup.Do(key, func() (interface{}, error) {
+	v, called, err := c.loadGroup.Do(key, func() (v interface{}, e error) {
+		defer func() {
+			if r := recover(); r != nil {
+				e = fmt.Errorf("Loader panics: %v", r)
+			}
+		}()
 		return cb(c.loaderExpireFunc(key))
 	}, isWait)
 	if err != nil {
