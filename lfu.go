@@ -284,6 +284,12 @@ func (c *LFUCache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.purgeVisitorFunc != nil {
+		for key, item := range c.items {
+			c.purgeVisitorFunc(key, item.value)
+		}
+	}
+
 	c.init()
 }
 

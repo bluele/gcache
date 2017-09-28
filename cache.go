@@ -35,6 +35,7 @@ type baseCache struct {
 	size             int
 	loaderExpireFunc LoaderExpireFunc
 	evictedFunc      EvictedFunc
+	purgeVisitorFunc PurgeVisitorFunc
 	addedFunc        AddedFunc
 	deserializeFunc  DeserializeFunc
 	serializeFunc    SerializeFunc
@@ -48,6 +49,7 @@ type (
 	LoaderFunc       func(interface{}) (interface{}, error)
 	LoaderExpireFunc func(interface{}) (interface{}, *time.Duration, error)
 	EvictedFunc      func(interface{}, interface{})
+	PurgeVisitorFunc func(interface{}, interface{})
 	AddedFunc        func(interface{}, interface{})
 	DeserializeFunc  func(interface{}, interface{}) (interface{}, error)
 	SerializeFunc    func(interface{}, interface{}) (interface{}, error)
@@ -59,6 +61,7 @@ type CacheBuilder struct {
 	size             int
 	loaderExpireFunc LoaderExpireFunc
 	evictedFunc      EvictedFunc
+	purgeVisitorFunc PurgeVisitorFunc
 	addedFunc        AddedFunc
 	expiration       *time.Duration
 	deserializeFunc  DeserializeFunc
@@ -125,6 +128,11 @@ func (cb *CacheBuilder) EvictedFunc(evictedFunc EvictedFunc) *CacheBuilder {
 	return cb
 }
 
+func (cb *CacheBuilder) PurgeVisitorFunc(purgeVisitorFunc PurgeVisitorFunc) *CacheBuilder {
+	cb.purgeVisitorFunc = purgeVisitorFunc
+	return cb
+}
+
 func (cb *CacheBuilder) AddedFunc(addedFunc AddedFunc) *CacheBuilder {
 	cb.addedFunc = addedFunc
 	return cb
@@ -173,6 +181,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.deserializeFunc = cb.deserializeFunc
 	c.serializeFunc = cb.serializeFunc
 	c.evictedFunc = cb.evictedFunc
+	c.purgeVisitorFunc = cb.purgeVisitorFunc
 	c.stats = &stats{}
 }
 
