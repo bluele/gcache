@@ -136,6 +136,75 @@ func TestLoaderExpireFuncWithExpire(t *testing.T) {
 	}
 }
 
+func TestLoaderPurgeVisitorFunc(t *testing.T) {
+	size := 7
+	tests := []struct {
+		name         string
+		cacheBuilder *CacheBuilder
+	}{
+		{
+			name:         "simple",
+			cacheBuilder: New(size).Simple(),
+		},
+		{
+			name:         "lru",
+			cacheBuilder: New(size).LRU(),
+		},
+		{
+			name:         "lfu",
+			cacheBuilder: New(size).LFU(),
+		},
+		{
+			name:         "arc",
+			cacheBuilder: New(size).ARC(),
+		},
+	}
+
+	for _, test := range tests {
+		var purgeCounter, evictCounter, loaderCounter int64
+		counter := 1000
+		cache := test.cacheBuilder.
+			LoaderFunc(func(key interface{}) (interface{}, error) {
+				return atomic.AddInt64(&loaderCounter, 1), nil
+			}).
+			EvictedFunc(func(key, value interface{}) {
+				atomic.AddInt64(&evictCounter, 1)
+			}).
+			PurgeVisitorFunc(func(k, v interface{}) {
+				atomic.AddInt64(&purgeCounter, 1)
+			}).
+			Build()
+
+		var wg sync.WaitGroup
+		for i := 0; i < counter; i++ {
+			i := i
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, err := cache.Get(i)
+				if err != nil {
+					t.Error(err)
+				}
+			}()
+		}
+
+		wg.Wait()
+
+		if loaderCounter != int64(counter) {
+			t.Errorf("%s: loaderCounter != %v", test.name, loaderCounter)
+		}
+
+		cache.Purge()
+
+		if evictCounter+purgeCounter != loaderCounter {
+			t.Logf("%s: evictCounter: %d", test.name, evictCounter)
+			t.Logf("%s: purgeCounter: %d", test.name, purgeCounter)
+			t.Logf("%s: loaderCounter: %d", test.name, loaderCounter)
+			t.Errorf("%s: load != evict+purge", test.name)
+		}
+	}
+}
+
 func TestDeserializeFunc(t *testing.T) {
 	var cases = []struct {
 		tp string

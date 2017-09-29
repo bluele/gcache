@@ -335,6 +335,12 @@ func (c *ARC) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.purgeVisitorFunc != nil {
+		for _, item := range c.items {
+			c.purgeVisitorFunc(item.key, item.value)
+		}
+	}
+
 	c.init()
 }
 

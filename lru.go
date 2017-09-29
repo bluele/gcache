@@ -254,6 +254,14 @@ func (c *LRUCache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.purgeVisitorFunc != nil {
+		for key, item := range c.items {
+			it := item.Value.(*lruItem)
+			v := it.value
+			c.purgeVisitorFunc(key, v)
+		}
+	}
+
 	c.init()
 }
 
