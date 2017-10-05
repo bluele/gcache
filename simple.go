@@ -18,7 +18,7 @@ func newSimpleCache(cb *CacheBuilder) *SimpleCache {
 }
 
 func (c *SimpleCache) init() {
-	if c.size == -1 {
+	if c.size <= 0 {
 		c.items = make(map[interface{}]*simpleItem)
 	} else {
 		c.items = make(map[interface{}]*simpleItem, c.size)
@@ -62,7 +62,7 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 		item.value = value
 	} else {
 		// Verify size not exceeded
-		if (len(c.items) >= c.size) && c.size != -1 {
+		if (len(c.items) >= c.size) && c.size > 0 {
 			c.evict(1)
 		}
 		item = &simpleItem{
