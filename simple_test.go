@@ -61,6 +61,26 @@ func TestSimpleEvictItem(t *testing.T) {
 	}
 }
 
+func TestSimpleUnboundedNoEviction(t *testing.T) {
+	numbers := 1000
+	size_tracker := 0
+	gcu := buildLoadingSimpleCache(0, loader)
+
+	for i := 0; i < numbers; i++ {
+		current_size := gcu.Len()
+		if current_size != size_tracker {
+			t.Errorf("Excepted cache size is %v not %v", current_size, size_tracker)
+		}
+
+		_, err := gcu.Get(fmt.Sprintf("Key-%d", i))
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		size_tracker++
+	}
+}
+
 func TestSimpleGetIFPresent(t *testing.T) {
 	testGetIFPresent(t, TYPE_SIMPLE)
 }
