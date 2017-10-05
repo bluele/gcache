@@ -21,7 +21,7 @@ func buildLoadingSimpleCache(size int, loader LoaderFunc) Cache {
 }
 
 func evictedFuncForSimple(key, value interface{}) {
-	fmt.Printf("[Simple] Key:%v Value:%v will evicted.\n", key, value)
+	fmt.Printf("[Simple] Key:%v Value:%v will be evicted.\n", key, value)
 }
 
 func TestSimpleGet(t *testing.T) {
