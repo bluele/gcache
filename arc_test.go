@@ -31,7 +31,7 @@ func buildLoadingARCacheWithExpiration(size int, ep time.Duration) Cache {
 }
 
 func evictedFuncForARC(key, value interface{}) {
-	fmt.Printf("[ARC] Key:%v Value:%v will evicted.\n", key, value)
+	fmt.Printf("[ARC] Key:%v Value:%v will be evicted.\n", key, value)
 }
 
 func TestARCGet(t *testing.T) {

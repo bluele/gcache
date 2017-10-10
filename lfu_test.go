@@ -7,7 +7,7 @@ import (
 )
 
 func evictedFuncForLFU(key, value interface{}) {
-	fmt.Printf("[LFU] Key:%v Value:%v will evicted.\n", key, value)
+	fmt.Printf("[LFU] Key:%v Value:%v will be evicted.\n", key, value)
 }
 
 func buildLFUCache(size int) Cache {
