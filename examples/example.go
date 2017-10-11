@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	gc := gcache.New(10).
+	gc, _ := gcache.New(10).
 		LFU().
 		Build()
 	gc.Set("key", "ok")
