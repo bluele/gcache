@@ -10,7 +10,7 @@ func evictedFuncForLFU(key, value interface{}) {
 	fmt.Printf("[LFU] Key:%v Value:%v will be evicted.\n", key, value)
 }
 
-func buildLFUCache(size int) Cache {
+func buildLFUCache(size int) (Cache, error) {
 	return New(size).
 		LFU().
 		EvictedFunc(evictedFuncForLFU).
@@ -18,7 +18,7 @@ func buildLFUCache(size int) Cache {
 		Build()
 }
 
-func buildLoadingLFUCache(size int, loader LoaderFunc) Cache {
+func buildLoadingLFUCache(size int, loader LoaderFunc) (Cache, error) {
 	return New(size).
 		LFU().
 		LoaderFunc(loader).
@@ -31,7 +31,11 @@ func TestLFUGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
 
-	gc := buildLoadingLFUCache(size, loader)
+	gc, err := buildLoadingLFUCache(size, loader)
+	if err != nil {
+		t.Error(err)
+	}
+
 	testSetCache(t, gc, numbers)
 	testGetCache(t, gc, numbers)
 }
@@ -40,12 +44,20 @@ func TestLoadingLFUGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
 
-	gc := buildLoadingLFUCache(size, loader)
+	gc, err := buildLoadingLFUCache(size, loader)
+	if err != nil {
+		t.Error(err)
+	}
+
 	testGetCache(t, gc, numbers)
 }
 
 func TestLFULength(t *testing.T) {
-	gc := buildLoadingLFUCache(1000, loader)
+	gc, err := buildLoadingLFUCache(1000, loader)
+	if err != nil {
+		t.Error(err)
+	}
+
 	gc.Get("test1")
 	gc.Get("test2")
 	length := gc.Len()
@@ -58,7 +70,10 @@ func TestLFULength(t *testing.T) {
 func TestLFUEvictItem(t *testing.T) {
 	cacheSize := 10
 	numbers := 11
-	gc := buildLoadingLFUCache(cacheSize, loader)
+	gc, err := buildLoadingLFUCache(cacheSize, loader)
+	if err != nil {
+		t.Error(err)
+	}
 
 	for i := 0; i < numbers; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))

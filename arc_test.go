@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-func buildARCache(size int) Cache {
+func buildARCache(size int) (Cache, error) {
 	return New(size).
 		ARC().
 		EvictedFunc(evictedFuncForARC).
 		Build()
 }
 
-func buildLoadingARCache(size int) Cache {
+func buildLoadingARCache(size int) (Cache, error) {
 	return New(size).
 		ARC().
 		LoaderFunc(loader).
@@ -21,7 +21,7 @@ func buildLoadingARCache(size int) Cache {
 		Build()
 }
 
-func buildLoadingARCacheWithExpiration(size int, ep time.Duration) Cache {
+func buildLoadingARCacheWithExpiration(size int, ep time.Duration) (Cache, error) {
 	return New(size).
 		ARC().
 		Expiration(ep).
@@ -36,7 +36,10 @@ func evictedFuncForARC(key, value interface{}) {
 
 func TestARCGet(t *testing.T) {
 	size := 1000
-	gc := buildARCache(size)
+	gc, err := buildARCache(size)
+	if err != nil {
+		t.Error(err)
+	}
 	testSetCache(t, gc, size)
 	testGetCache(t, gc, size)
 }
@@ -44,11 +47,19 @@ func TestARCGet(t *testing.T) {
 func TestLoadingARCGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
-	testGetCache(t, buildLoadingARCache(size), numbers)
+	gc, err := buildLoadingARCache(size)
+	if err != nil {
+		t.Error(err)
+	}
+	testGetCache(t, gc, numbers)
 }
 
 func TestARCLength(t *testing.T) {
-	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
+	gc, err := buildLoadingARCacheWithExpiration(2, time.Millisecond)
+	if err != nil {
+		t.Error(err)
+	}
+
 	gc.Get("test1")
 	gc.Get("test2")
 	gc.Get("test3")
@@ -69,7 +80,10 @@ func TestARCLength(t *testing.T) {
 func TestARCEvictItem(t *testing.T) {
 	cacheSize := 10
 	numbers := cacheSize + 1
-	gc := buildLoadingARCache(cacheSize)
+	gc, err := buildLoadingARCache(cacheSize)
+	if err != nil {
+		t.Error(err)
+	}
 
 	for i := 0; i < numbers; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
@@ -82,13 +96,17 @@ func TestARCEvictItem(t *testing.T) {
 func TestARCPurgeCache(t *testing.T) {
 	cacheSize := 10
 	purgeCount := 0
-	gc := New(cacheSize).
+	gc, err := New(cacheSize).
 		ARC().
 		LoaderFunc(loader).
 		PurgeVisitorFunc(func(k, v interface{}) {
 			purgeCount++
 		}).
 		Build()
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	for i := 0; i < cacheSize; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))

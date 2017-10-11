@@ -41,7 +41,11 @@ func TestCacheStats(t *testing.T) {
 	}{
 		{
 			builder: func() Cache {
-				cc := New(32).Simple().Build()
+				cc, err := New(32).Simple().Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -51,7 +55,11 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).LRU().Build()
+				cc, err := New(32).LRU().Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -61,7 +69,11 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).LFU().Build()
+				cc, err := New(32).LFU().Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -71,7 +83,11 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).ARC().Build()
+				cc, err := New(32).ARC().Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -81,10 +97,14 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).
+				cc, err := New(32).
 					Simple().
 					LoaderFunc(getter).
 					Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -94,10 +114,14 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).
+				cc, err := New(32).
 					LRU().
 					LoaderFunc(getter).
 					Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -107,10 +131,14 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).
+				cc, err := New(32).
 					LFU().
 					LoaderFunc(getter).
 					Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)
@@ -120,10 +148,14 @@ func TestCacheStats(t *testing.T) {
 		},
 		{
 			builder: func() Cache {
-				cc := New(32).
+				cc, err := New(32).
 					ARC().
 					LoaderFunc(getter).
 					Build()
+				if err != nil {
+					t.Error(err)
+				}
+
 				cc.Set(0, 0)
 				cc.Get(0)
 				cc.Get(1)

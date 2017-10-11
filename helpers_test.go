@@ -16,8 +16,8 @@ func testSetCache(t *testing.T, gc Cache, numbers int) {
 		value, err := loader(key)
 		if err != nil {
 			t.Error(err)
-			return
 		}
+
 		gc.Set(key, value)
 	}
 }
@@ -37,7 +37,7 @@ func testGetCache(t *testing.T, gc Cache, numbers int) {
 }
 
 func testGetIFPresent(t *testing.T, evT string) {
-	cache :=
+	cache, err :=
 		New(8).
 			EvictType(evT).
 			LoaderFunc(
@@ -45,6 +45,10 @@ func testGetIFPresent(t *testing.T, evT string) {
 					return "value", nil
 				}).
 			Build()
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	v, err := cache.GetIFPresent("key")
 	if err != KeyNotFoundError {
@@ -64,11 +68,16 @@ func testGetIFPresent(t *testing.T, evT string) {
 
 func testGetALL(t *testing.T, evT string) {
 	size := 8
-	cache :=
+	cache, err :=
 		New(size).
 			Expiration(time.Millisecond).
 			EvictType(evT).
 			Build()
+
+	if err != nil {
+		t.Error(err)
+	}
+
 	for i := 0; i < size; i++ {
 		cache.Set(i, i*i)
 	}

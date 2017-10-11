@@ -15,6 +15,8 @@ const (
 )
 
 var KeyNotFoundError = errors.New("Key not found.")
+var InvalidCacheSizeError = errors.New("Invalid Cache size")
+var UnknownCacheTypeError = errors.New("Unknown Cache type")
 
 type Cache interface {
 	Set(interface{}, interface{}) error
@@ -151,26 +153,26 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 	return cb
 }
 
-func (cb *CacheBuilder) Build() Cache {
+func (cb *CacheBuilder) Build() (Cache, error) {
 	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
-		panic("gcache: Cache size <= 0")
+		return newSimpleCache(cb), InvalidCacheSizeError
 	}
 
 	return cb.build()
 }
 
-func (cb *CacheBuilder) build() Cache {
+func (cb *CacheBuilder) build() (Cache, error) {
 	switch cb.tp {
 	case TYPE_SIMPLE:
-		return newSimpleCache(cb)
+		return newSimpleCache(cb), nil
 	case TYPE_LRU:
-		return newLRUCache(cb)
+		return newLRUCache(cb), nil
 	case TYPE_LFU:
-		return newLFUCache(cb)
+		return newLFUCache(cb), nil
 	case TYPE_ARC:
-		return newARC(cb)
+		return newARC(cb), nil
 	default:
-		panic("gcache: Unknown type " + cb.tp)
+		return newSimpleCache(cb), UnknownCacheTypeError
 	}
 }
 

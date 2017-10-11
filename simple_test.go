@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-func buildSimpleCache(size int) Cache {
+func buildSimpleCache(size int) (Cache, error) {
 	return New(size).
 		Simple().
 		EvictedFunc(evictedFuncForSimple).
 		Build()
 }
 
-func buildLoadingSimpleCache(size int, loader LoaderFunc) Cache {
+func buildLoadingSimpleCache(size int, loader LoaderFunc) (Cache, error) {
 	return New(size).
 		LoaderFunc(loader).
 		Simple().
@@ -26,7 +26,11 @@ func evictedFuncForSimple(key, value interface{}) {
 
 func TestSimpleGet(t *testing.T) {
 	size := 1000
-	gc := buildSimpleCache(size)
+	gc, err := buildSimpleCache(size)
+	if err != nil {
+		t.Error(err)
+	}
+
 	testSetCache(t, gc, size)
 	testGetCache(t, gc, size)
 }
@@ -34,11 +38,20 @@ func TestSimpleGet(t *testing.T) {
 func TestLoadingSimpleGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
-	testGetCache(t, buildLoadingSimpleCache(size, loader), numbers)
+	gc, err := buildLoadingSimpleCache(size, loader)
+	if err != nil {
+		t.Error(err)
+	}
+
+	testGetCache(t, gc, numbers)
 }
 
 func TestSimpleLength(t *testing.T) {
-	gc := buildLoadingSimpleCache(1000, loader)
+	gc, err := buildLoadingSimpleCache(1000, loader)
+	if err != nil {
+		t.Error(err)
+	}
+
 	gc.Get("test1")
 	gc.Get("test2")
 	length := gc.Len()
@@ -51,7 +64,10 @@ func TestSimpleLength(t *testing.T) {
 func TestSimpleEvictItem(t *testing.T) {
 	cacheSize := 10
 	numbers := 11
-	gc := buildLoadingSimpleCache(cacheSize, loader)
+	gc, err := buildLoadingSimpleCache(cacheSize, loader)
+	if err != nil {
+		t.Error(err)
+	}
 
 	for i := 0; i < numbers; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
@@ -64,7 +80,10 @@ func TestSimpleEvictItem(t *testing.T) {
 func TestSimpleUnboundedNoEviction(t *testing.T) {
 	numbers := 1000
 	size_tracker := 0
-	gcu := buildLoadingSimpleCache(0, loader)
+	gcu, err := buildLoadingSimpleCache(0, loader)
+	if err != nil {
+		t.Error(err)
+	}
 
 	for i := 0; i < numbers; i++ {
 		current_size := gcu.Len()
