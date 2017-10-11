@@ -155,7 +155,6 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 
 func (cb *CacheBuilder) Build() Cache {
 	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
-		panic("gcache: Cache size <= 0")
 	}
 
 	return cb.build()
@@ -172,7 +171,6 @@ func (cb *CacheBuilder) build() Cache {
 	case TYPE_ARC:
 		return newARC(cb)
 	default:
-		panic("gcache: Unknown type " + cb.tp)
 	}
 }
 
