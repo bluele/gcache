@@ -153,24 +153,26 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 	return cb
 }
 
-func (cb *CacheBuilder) Build() Cache {
+func (cb *CacheBuilder) Build() (Cache, error) {
 	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
+		return newSimpleCache(cb), InvalidCacheSizeError
 	}
 
 	return cb.build()
 }
 
-func (cb *CacheBuilder) build() Cache {
+func (cb *CacheBuilder) build() (Cache, error) {
 	switch cb.tp {
 	case TYPE_SIMPLE:
-		return newSimpleCache(cb)
+		return newSimpleCache(cb), nil
 	case TYPE_LRU:
-		return newLRUCache(cb)
+		return newLRUCache(cb), nil
 	case TYPE_LFU:
-		return newLFUCache(cb)
+		return newLFUCache(cb), nil
 	case TYPE_ARC:
-		return newARC(cb)
+		return newARC(cb), nil
 	default:
+		return newSimpleCache(cb), UnknownCacheTypeError
 	}
 }
 
