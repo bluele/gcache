@@ -15,6 +15,8 @@ const (
 )
 
 var KeyNotFoundError = errors.New("Key not found.")
+var InvalidCacheSizeError = errors.New("Invalid Cache size")
+var UnknownCacheTypeError = errors.New("Unknown Cache type")
 
 type Cache interface {
 	Set(interface{}, interface{}) error
