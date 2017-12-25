@@ -283,3 +283,48 @@ func (it *lruItem) IsExpired(now *time.Time) bool {
 	}
 	return it.expiration.Before(*now)
 }
+
+//return the ttl of the item
+func (it *lruItem) GetExpired(now *time.Time) (bool, time.Duration) {
+	if it.expiration == nil {
+		return false, time.Second*time.Duration(-1)
+	}
+	if now == nil {
+		t := it.clock.Now()
+		now = &t
+	}
+	return it.expiration.Before(*now), it.expiration.Sub(*now)
+}
+
+//get the TTL(Time to live) of the item
+func (c *LRUCache) getTTL(key interface{}, onLoad bool) (interface{}, error) {
+	c.mu.Lock()
+	item, ok := c.items[key]
+	if ok {
+		it := item.Value.(*lruItem)
+		if ret, ttl := it.GetExpired(nil); !ret {
+			c.evictList.MoveToFront(item)
+			//v := it.value
+			c.mu.Unlock()
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
+			return ttl, nil
+		}
+		c.removeElement(item)
+	}
+	c.mu.Unlock()
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
+	return nil, KeyNotFoundError
+}
+
+//get TTL of the key
+func (c *LRUCache) GetTTL(key interface{}) (interface{}, error) {
+	ttl, err := c.getTTL(key, false)
+	if err == KeyNotFoundError {
+		return c.getWithLoader(key, true)
+	}
+	return ttl, err
+}

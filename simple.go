@@ -271,3 +271,47 @@ func (si *simpleItem) IsExpired(now *time.Time) bool {
 	}
 	return si.expiration.Before(*now)
 }
+
+//return the ttl of the item
+func (si *simpleItem) GetExpired(now *time.Time) (bool, time.Duration) {
+	if si.expiration == nil {
+		return false, -1
+	}
+	if now == nil {
+		t := si.clock.Now()
+		now = &t
+	}
+	return si.expiration.Before(*now), -1
+}
+
+//get the TTL(Time to live) of the item
+func (c *SimpleCache) getTTL(key interface{}, onLoad bool) (interface{}, error) {
+	c.mu.Lock()
+	item, ok := c.items[key]
+	if ok {
+		//if !item.IsExpired(nil) {
+		if ret, ttl := item.GetExpired(nil); !ret {
+			//v := item.value
+			c.mu.Unlock()
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
+			return ttl, nil
+		}
+		c.remove(key)
+	}
+	c.mu.Unlock()
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
+	return nil, KeyNotFoundError
+}
+
+//get TTL of the key
+func (c *SimpleCache) GetTTL(key interface{}) (interface{}, error) {
+	ttl, err := c.getTTL(key, false)
+	if err == KeyNotFoundError {
+		return c.getWithLoader(key, true)
+	}
+	return ttl, err
+}

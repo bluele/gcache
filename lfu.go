@@ -317,3 +317,47 @@ func (it *lfuItem) IsExpired(now *time.Time) bool {
 	}
 	return it.expiration.Before(*now)
 }
+
+//return the ttl of the item
+func (it *lfuItem) GetExpired(now *time.Time) (bool, time.Duration) {
+	if it.expiration == nil {
+		return false, time.Second*time.Duration(-1)
+	}
+	if now == nil {
+		t := it.clock.Now()
+		now = &t
+	}
+	return it.expiration.Before(*now), it.expiration.Sub(*now)
+}
+
+//get the TTL(Time to live) of the item
+func (c *LFUCache) getTTL(key interface{}, onLoad bool) (interface{}, error) {
+	c.mu.Lock()
+	item, ok := c.items[key]
+	if ok {
+		if ret, ttl := item.GetExpired(nil); !ret {
+			c.increment(item)
+			//v := item.value
+			c.mu.Unlock()
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
+			return ttl, nil
+		}
+		c.removeItem(item)
+	}
+	c.mu.Unlock()
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
+	return nil, KeyNotFoundError
+}
+
+//get TTL of the key
+func (c *LFUCache) GetTTL(key interface{}) (interface{}, error) {
+	ttl, err := c.getTTL(key, false)
+	if err == KeyNotFoundError {
+		return c.getWithLoader(key, true)
+	}
+	return ttl, err
+}

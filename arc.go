@@ -416,3 +416,69 @@ func (al *arcList) RemoveTail() interface{} {
 func (al *arcList) Len() int {
 	return al.l.Len()
 }
+
+//return the ttl of the item
+func (it *arcItem) GetExpired(now *time.Time) (bool, time.Duration) {
+	if it.expiration == nil {
+		return false, time.Second*time.Duration(-1)
+	}
+	if now == nil {
+		t := it.clock.Now()
+		now = &t
+	}
+	return it.expiration.Before(*now), it.expiration.Sub(*now)
+}
+
+//get the TTL(Time to live) of the item
+func (c *ARC) getTTL(key interface{}, onLoad bool) (interface{}, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if elt := c.t1.Lookup(key); elt != nil {
+		c.t1.Remove(key, elt)
+		item := c.items[key]
+		if ret, ttl := item.GetExpired(nil); !ret {
+			c.t2.PushFront(key)
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
+			return ttl, nil
+		} else {
+			delete(c.items, key)
+			c.b1.PushFront(key)
+			if c.evictedFunc != nil {
+				c.evictedFunc(item.key, item.value)
+			}
+		}
+	}
+	if elt := c.t2.Lookup(key); elt != nil {
+		item := c.items[key]
+		if ret, ttl := item.GetExpired(nil); !ret {
+			c.t2.MoveToFront(elt)
+			if !onLoad {
+				c.stats.IncrHitCount()
+			}
+			return ttl, nil
+		} else {
+			delete(c.items, key)
+			c.t2.Remove(key, elt)
+			c.b2.PushFront(key)
+			if c.evictedFunc != nil {
+				c.evictedFunc(item.key, item.value)
+			}
+		}
+	}
+
+	if !onLoad {
+		c.stats.IncrMissCount()
+	}
+	return nil, KeyNotFoundError
+}
+
+//get TTL of the key
+func (c *ARC) GetTTL(key interface{}) (interface{}, error) {
+	ttl, err := c.getTTL(key, false)
+	if err == KeyNotFoundError {
+		return c.getWithLoader(key, true)
+	}
+	return ttl, err
+}
