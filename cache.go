@@ -28,6 +28,10 @@ type Cache interface {
 	Keys() []interface{}
 	Len() int
 
+	//1. key not found, return nil, KeyNotFoundError
+	//2. Without expire, return time.Second*time.Duration(-1), nil
+	//3. With expire, return TTL, nil
+	GetTTL(interface{}) (interface{}, error)
 	statsAccessor
 }
 
