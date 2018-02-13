@@ -276,7 +276,7 @@ func (c *LFUCache) GetALL() map[interface{}]interface{} {
 
 // Returns the number of items in the cache.
 func (c *LFUCache) Len() int {
-	return len(c.GetALL())
+	return len(c.items)
 }
 
 // Completely clear the cache

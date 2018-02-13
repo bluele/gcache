@@ -237,7 +237,7 @@ func (c *SimpleCache) GetALL() map[interface{}]interface{} {
 
 // Returns the number of items in the cache.
 func (c *SimpleCache) Len() int {
-	return len(c.GetALL())
+	return len(c.items)
 }
 
 // Completely clear the cache

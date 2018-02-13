@@ -246,7 +246,7 @@ func (c *LRUCache) GetALL() map[interface{}]interface{} {
 
 // Returns the number of items in the cache.
 func (c *LRUCache) Len() int {
-	return len(c.GetALL())
+	return len(c.items)
 }
 
 // Completely clear the cache
