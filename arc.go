@@ -303,7 +303,9 @@ func (c *ARC) keys() []interface{} {
 
 // Keys returns a slice of the keys in the cache.
 func (c *ARC) Keys() []interface{} {
-	keys := []interface{}{}
+	c.mu.RLock()
+	keys := make([]interface{}, 0, len(c.items))
+	c.mu.RUnlock()
 	for _, k := range c.keys() {
 		_, err := c.GetIFPresent(k)
 		if err == nil {
@@ -315,7 +317,9 @@ func (c *ARC) Keys() []interface{} {
 
 // Returns all key-value pairs in the cache.
 func (c *ARC) GetALL() map[interface{}]interface{} {
-	m := make(map[interface{}]interface{})
+	c.mu.RLock()
+	m := make(map[interface{}]interface{}, len(c.items))
+	c.mu.RUnlock()
 	for _, k := range c.keys() {
 		v, err := c.GetIFPresent(k)
 		if err == nil {
@@ -327,7 +331,7 @@ func (c *ARC) GetALL() map[interface{}]interface{} {
 
 // Len returns the number of items in the cache.
 func (c *ARC) Len() int {
-	return len(c.GetALL())
+	return len(c.Keys())
 }
 
 // Purge is used to completely clear the cache
