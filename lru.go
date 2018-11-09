@@ -44,7 +44,7 @@ func (c *LRUCache) set(key, value interface{}) (interface{}, error) {
 	} else {
 		// Verify size not exceeded
 		if c.evictList.Len() >= c.size {
-			c.evict(1)
+			c.evict(c.evictList.Len() - c.size - 1)
 		}
 		item = &lruItem{
 			clock: c.clock,
