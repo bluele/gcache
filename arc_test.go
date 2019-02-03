@@ -6,37 +6,9 @@ import (
 	"time"
 )
 
-func buildARCache(size int) Cache {
-	return New(size).
-		ARC().
-		EvictedFunc(evictedFuncForARC).
-		Build()
-}
-
-func buildLoadingARCache(size int) Cache {
-	return New(size).
-		ARC().
-		LoaderFunc(loader).
-		EvictedFunc(evictedFuncForARC).
-		Build()
-}
-
-func buildLoadingARCacheWithExpiration(size int, ep time.Duration) Cache {
-	return New(size).
-		ARC().
-		Expiration(ep).
-		LoaderFunc(loader).
-		EvictedFunc(evictedFuncForARC).
-		Build()
-}
-
-func evictedFuncForARC(key, value interface{}) {
-	fmt.Printf("[ARC] Key:%v Value:%v will be evicted.\n", key, value)
-}
-
 func TestARCGet(t *testing.T) {
 	size := 1000
-	gc := buildARCache(size)
+	gc := buildTestCache(t, TYPE_ARC, size)
 	testSetCache(t, gc, size)
 	testGetCache(t, gc, size)
 }
@@ -44,11 +16,11 @@ func TestARCGet(t *testing.T) {
 func TestLoadingARCGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
-	testGetCache(t, buildLoadingARCache(size), numbers)
+	testGetCache(t, buildTestLoadingCache(t, TYPE_ARC, size, loader), numbers)
 }
 
 func TestARCLength(t *testing.T) {
-	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
+	gc := buildTestLoadingCacheWithExpiration(t, TYPE_ARC, 2, time.Millisecond)
 	gc.Get("test1")
 	gc.Get("test2")
 	gc.Get("test3")
@@ -69,7 +41,7 @@ func TestARCLength(t *testing.T) {
 func TestARCEvictItem(t *testing.T) {
 	cacheSize := 10
 	numbers := cacheSize + 1
-	gc := buildLoadingARCache(cacheSize)
+	gc := buildTestLoadingCache(t, TYPE_ARC, cacheSize, loader)
 
 	for i := 0; i < numbers; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
@@ -113,7 +85,7 @@ func TestARCGetALL(t *testing.T) {
 }
 
 func TestARCHas(t *testing.T) {
-	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
+	gc := buildTestLoadingCacheWithExpiration(t, TYPE_ARC, 2, 10*time.Millisecond)
 
 	for i := 0; i < 10; i++ {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
@@ -130,7 +102,7 @@ func TestARCHas(t *testing.T) {
 				t.Fatal("should have test2")
 			}
 
-			time.Sleep(time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 
 			if gc.Has("test0") {
 				t.Fatal("should not have test0")

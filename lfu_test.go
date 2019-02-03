@@ -6,39 +6,11 @@ import (
 	"time"
 )
 
-func evictedFuncForLFU(key, value interface{}) {
-	fmt.Printf("[LFU] Key:%v Value:%v will be evicted.\n", key, value)
-}
-
-func buildLFUCache(size int) Cache {
-	return New(size).
-		LFU().
-		EvictedFunc(evictedFuncForLFU).
-		Build()
-}
-
-func buildLoadingLFUCache(size int, loader LoaderFunc) Cache {
-	return New(size).
-		LFU().
-		LoaderFunc(loader).
-		EvictedFunc(evictedFuncForLFU).
-		Build()
-}
-
-func buildLoadingLFUCacheWithExpiration(size int, ep time.Duration) Cache {
-	return New(size).
-		LFU().
-		Expiration(ep).
-		LoaderFunc(loader).
-		EvictedFunc(evictedFuncForLFU).
-		Build()
-}
-
 func TestLFUGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
 
-	gc := buildLoadingLFUCache(size, loader)
+	gc := buildTestLoadingCache(t, TYPE_LFU, size, loader)
 	testSetCache(t, gc, numbers)
 	testGetCache(t, gc, numbers)
 }
@@ -47,12 +19,12 @@ func TestLoadingLFUGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
 
-	gc := buildLoadingLFUCache(size, loader)
+	gc := buildTestLoadingCache(t, TYPE_LFU, size, loader)
 	testGetCache(t, gc, numbers)
 }
 
 func TestLFULength(t *testing.T) {
-	gc := buildLoadingLFUCache(1000, loader)
+	gc := buildTestLoadingCache(t, TYPE_LFU, 1000, loader)
 	gc.Get("test1")
 	gc.Get("test2")
 	length := gc.Len()
@@ -65,7 +37,7 @@ func TestLFULength(t *testing.T) {
 func TestLFUEvictItem(t *testing.T) {
 	cacheSize := 10
 	numbers := 11
-	gc := buildLoadingLFUCache(cacheSize, loader)
+	gc := buildTestLoadingCache(t, TYPE_LFU, cacheSize, loader)
 
 	for i := 0; i < numbers; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
@@ -84,7 +56,7 @@ func TestLFUGetALL(t *testing.T) {
 }
 
 func TestLFUHas(t *testing.T) {
-	gc := buildLoadingLFUCacheWithExpiration(2, time.Millisecond)
+	gc := buildTestLoadingCacheWithExpiration(t, TYPE_LFU, 2, 10*time.Millisecond)
 
 	for i := 0; i < 10; i++ {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
@@ -101,7 +73,7 @@ func TestLFUHas(t *testing.T) {
 				t.Fatal("should have test2")
 			}
 
-			time.Sleep(time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 
 			if gc.Has("test0") {
 				t.Fatal("should not have test0")
