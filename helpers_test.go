@@ -72,7 +72,7 @@ func testGetALL(t *testing.T, evT string) {
 	for i := 0; i < size; i++ {
 		cache.Set(i, i*i)
 	}
-	m := cache.GetALL()
+	m := cache.GetALL(true)
 	for i := 0; i < size; i++ {
 		v, ok := m[i]
 		if !ok {
@@ -87,7 +87,7 @@ func testGetALL(t *testing.T, evT string) {
 	time.Sleep(time.Millisecond)
 
 	cache.Set(size, size*size)
-	m = cache.GetALL()
+	m = cache.GetALL(true)
 	if len(m) != 1 {
 		t.Errorf("%v != %v", len(m), 1)
 	}

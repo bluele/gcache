@@ -24,14 +24,14 @@ func TestARCLength(t *testing.T) {
 	gc.Get("test1")
 	gc.Get("test2")
 	gc.Get("test3")
-	length := gc.Len()
+	length := gc.Len(true)
 	expectedLength := 2
 	if length != expectedLength {
 		t.Errorf("Expected length is %v, not %v", expectedLength, length)
 	}
 	time.Sleep(time.Millisecond)
 	gc.Get("test4")
-	length = gc.Len()
+	length = gc.Len(true)
 	expectedLength = 1
 	if length != expectedLength {
 		t.Errorf("Expected length is %v, not %v", expectedLength, length)

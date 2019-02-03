@@ -21,13 +21,13 @@ type Cache interface {
 	SetWithExpire(interface{}, interface{}, time.Duration) error
 	Get(interface{}) (interface{}, error)
 	GetIFPresent(interface{}) (interface{}, error)
-	GetALL() map[interface{}]interface{}
-	Has(interface{}) bool
+	GetALL(bool) map[interface{}]interface{}
 	get(interface{}, bool) (interface{}, error)
 	Remove(interface{}) bool
 	Purge()
-	Keys() []interface{}
-	Len() int
+	Keys(bool) []interface{}
+	Len(bool) int
+	Has(interface{}) bool
 
 	statsAccessor
 }

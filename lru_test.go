@@ -23,7 +23,7 @@ func TestLRULength(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_LRU, 1000, loader)
 	gc.Get("test1")
 	gc.Get("test2")
-	length := gc.Len()
+	length := gc.Len(true)
 	expectedLength := 2
 	if length != expectedLength {
 		t.Errorf("Expected length is %v, not %v", length, expectedLength)

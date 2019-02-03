@@ -23,7 +23,7 @@ func TestSimpleLength(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_SIMPLE, 1000, loader)
 	gc.Get("test1")
 	gc.Get("test2")
-	length := gc.Len()
+	length := gc.Len(true)
 	expectedLength := 2
 	if length != expectedLength {
 		t.Errorf("Expected length is %v, not %v", length, expectedLength)
@@ -49,7 +49,7 @@ func TestSimpleUnboundedNoEviction(t *testing.T) {
 	gcu := buildTestLoadingCache(t, TYPE_SIMPLE, 0, loader)
 
 	for i := 0; i < numbers; i++ {
-		current_size := gcu.Len()
+		current_size := gcu.Len(true)
 		if current_size != size_tracker {
 			t.Errorf("Excepted cache size is %v not %v", current_size, size_tracker)
 		}
