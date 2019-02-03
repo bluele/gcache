@@ -255,6 +255,22 @@ func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
 	return value, nil
 }
 
+// Has checks if key exists in cache
+func (c *ARC) Has(key interface{}) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	now := time.Now()
+	return c.has(key, &now)
+}
+
+func (c *ARC) has(key interface{}, now *time.Time) bool {
+	item, ok := c.items[key]
+	if !ok {
+		return false
+	}
+	return !item.IsExpired(now)
+}
+
 // Remove removes the provided key from the cache.
 func (c *ARC) Remove(key interface{}) bool {
 	c.mu.Lock()

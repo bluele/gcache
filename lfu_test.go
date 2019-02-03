@@ -14,7 +14,6 @@ func buildLFUCache(size int) Cache {
 	return New(size).
 		LFU().
 		EvictedFunc(evictedFuncForLFU).
-		Expiration(time.Second).
 		Build()
 }
 
@@ -23,7 +22,15 @@ func buildLoadingLFUCache(size int, loader LoaderFunc) Cache {
 		LFU().
 		LoaderFunc(loader).
 		EvictedFunc(evictedFuncForLFU).
-		Expiration(time.Second).
+		Build()
+}
+
+func buildLoadingLFUCacheWithExpiration(size int, ep time.Duration) Cache {
+	return New(size).
+		LFU().
+		Expiration(ep).
+		LoaderFunc(loader).
+		EvictedFunc(evictedFuncForLFU).
 		Build()
 }
 
@@ -74,4 +81,37 @@ func TestLFUGetIFPresent(t *testing.T) {
 
 func TestLFUGetALL(t *testing.T) {
 	testGetALL(t, TYPE_LFU)
+}
+
+func TestLFUHas(t *testing.T) {
+	gc := buildLoadingLFUCacheWithExpiration(2, time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			gc.Get("test1")
+			gc.Get("test2")
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if !gc.Has("test1") {
+				t.Fatal("should have test1")
+			}
+			if !gc.Has("test2") {
+				t.Fatal("should have test2")
+			}
+
+			time.Sleep(time.Millisecond)
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if gc.Has("test1") {
+				t.Fatal("should not have test1")
+			}
+			if gc.Has("test2") {
+				t.Fatal("should not have test2")
+			}
+		})
+	}
 }

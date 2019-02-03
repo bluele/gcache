@@ -111,3 +111,36 @@ func TestARCGetIFPresent(t *testing.T) {
 func TestARCGetALL(t *testing.T) {
 	testGetALL(t, TYPE_ARC)
 }
+
+func TestARCHas(t *testing.T) {
+	gc := buildLoadingARCacheWithExpiration(2, time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			gc.Get("test1")
+			gc.Get("test2")
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if !gc.Has("test1") {
+				t.Fatal("should have test1")
+			}
+			if !gc.Has("test2") {
+				t.Fatal("should have test2")
+			}
+
+			time.Sleep(time.Millisecond)
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if gc.Has("test1") {
+				t.Fatal("should not have test1")
+			}
+			if gc.Has("test2") {
+				t.Fatal("should not have test2")
+			}
+		})
+	}
+}

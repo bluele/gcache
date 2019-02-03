@@ -3,6 +3,7 @@ package gcache
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func buildSimpleCache(size int) Cache {
@@ -16,6 +17,15 @@ func buildLoadingSimpleCache(size int, loader LoaderFunc) Cache {
 	return New(size).
 		LoaderFunc(loader).
 		Simple().
+		EvictedFunc(evictedFuncForSimple).
+		Build()
+}
+
+func buildLoadingSimpleCacheWithExpiration(size int, ep time.Duration) Cache {
+	return New(size).
+		LoaderFunc(loader).
+		Simple().
+		Expiration(ep).
 		EvictedFunc(evictedFuncForSimple).
 		Build()
 }
@@ -87,4 +97,37 @@ func TestSimpleGetIFPresent(t *testing.T) {
 
 func TestSimpleGetALL(t *testing.T) {
 	testGetALL(t, TYPE_SIMPLE)
+}
+
+func TestSimpleHas(t *testing.T) {
+	gc := buildLoadingSimpleCacheWithExpiration(2, time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			gc.Get("test1")
+			gc.Get("test2")
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if !gc.Has("test1") {
+				t.Fatal("should have test1")
+			}
+			if !gc.Has("test2") {
+				t.Fatal("should have test2")
+			}
+
+			time.Sleep(time.Millisecond)
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if gc.Has("test1") {
+				t.Fatal("should not have test1")
+			}
+			if gc.Has("test2") {
+				t.Fatal("should not have test2")
+			}
+		})
+	}
 }

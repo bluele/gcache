@@ -14,7 +14,6 @@ func buildLRUCache(size int) Cache {
 	return New(size).
 		LRU().
 		EvictedFunc(evictedFuncForLRU).
-		Expiration(time.Second).
 		Build()
 }
 
@@ -23,7 +22,15 @@ func buildLoadingLRUCache(size int, loader LoaderFunc) Cache {
 		LRU().
 		LoaderFunc(loader).
 		EvictedFunc(evictedFuncForLRU).
-		Expiration(time.Second).
+		Build()
+}
+
+func buildLoadingLRUCacheWithExpiration(size int, ep time.Duration) Cache {
+	return New(size).
+		LRU().
+		Expiration(ep).
+		LoaderFunc(loader).
+		EvictedFunc(evictedFuncForLRU).
 		Build()
 }
 
@@ -70,4 +77,37 @@ func TestLRUGetIFPresent(t *testing.T) {
 
 func TestLRUGetALL(t *testing.T) {
 	testGetALL(t, TYPE_LRU)
+}
+
+func TestLRUHas(t *testing.T) {
+	gc := buildLoadingLRUCacheWithExpiration(2, time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			gc.Get("test1")
+			gc.Get("test2")
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if !gc.Has("test1") {
+				t.Fatal("should have test1")
+			}
+			if !gc.Has("test2") {
+				t.Fatal("should have test2")
+			}
+
+			time.Sleep(time.Millisecond)
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if gc.Has("test1") {
+				t.Fatal("should not have test1")
+			}
+			if gc.Has("test2") {
+				t.Fatal("should not have test2")
+			}
+		})
+	}
 }
