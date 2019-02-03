@@ -178,6 +178,22 @@ func (c *SimpleCache) evict(count int) {
 	}
 }
 
+// Has checks if key exists in cache
+func (c *SimpleCache) Has(key interface{}) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	now := time.Now()
+	return c.has(key, &now)
+}
+
+func (c *SimpleCache) has(key interface{}, now *time.Time) bool {
+	item, ok := c.items[key]
+	if !ok {
+		return false
+	}
+	return !item.IsExpired(now)
+}
+
 // Removes the provided key from the cache.
 func (c *SimpleCache) Remove(key interface{}) bool {
 	c.mu.Lock()

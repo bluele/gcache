@@ -182,6 +182,22 @@ func (c *LRUCache) evict(count int) {
 	}
 }
 
+// Has checks if key exists in cache
+func (c *LRUCache) Has(key interface{}) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	now := time.Now()
+	return c.has(key, &now)
+}
+
+func (c *LRUCache) has(key interface{}, now *time.Time) bool {
+	item, ok := c.items[key]
+	if !ok {
+		return false
+	}
+	return !item.Value.(*lruItem).IsExpired(now)
+}
+
 // Removes the provided key from the cache.
 func (c *LRUCache) Remove(key interface{}) bool {
 	c.mu.Lock()

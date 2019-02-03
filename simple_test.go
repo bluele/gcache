@@ -3,30 +3,12 @@ package gcache
 import (
 	"fmt"
 	"testing"
+	"time"
 )
-
-func buildSimpleCache(size int) Cache {
-	return New(size).
-		Simple().
-		EvictedFunc(evictedFuncForSimple).
-		Build()
-}
-
-func buildLoadingSimpleCache(size int, loader LoaderFunc) Cache {
-	return New(size).
-		LoaderFunc(loader).
-		Simple().
-		EvictedFunc(evictedFuncForSimple).
-		Build()
-}
-
-func evictedFuncForSimple(key, value interface{}) {
-	fmt.Printf("[Simple] Key:%v Value:%v will be evicted.\n", key, value)
-}
 
 func TestSimpleGet(t *testing.T) {
 	size := 1000
-	gc := buildSimpleCache(size)
+	gc := buildTestCache(t, TYPE_SIMPLE, size)
 	testSetCache(t, gc, size)
 	testGetCache(t, gc, size)
 }
@@ -34,11 +16,11 @@ func TestSimpleGet(t *testing.T) {
 func TestLoadingSimpleGet(t *testing.T) {
 	size := 1000
 	numbers := 1000
-	testGetCache(t, buildLoadingSimpleCache(size, loader), numbers)
+	testGetCache(t, buildTestLoadingCache(t, TYPE_SIMPLE, size, loader), numbers)
 }
 
 func TestSimpleLength(t *testing.T) {
-	gc := buildLoadingSimpleCache(1000, loader)
+	gc := buildTestLoadingCache(t, TYPE_SIMPLE, 1000, loader)
 	gc.Get("test1")
 	gc.Get("test2")
 	length := gc.Len()
@@ -51,7 +33,7 @@ func TestSimpleLength(t *testing.T) {
 func TestSimpleEvictItem(t *testing.T) {
 	cacheSize := 10
 	numbers := 11
-	gc := buildLoadingSimpleCache(cacheSize, loader)
+	gc := buildTestLoadingCache(t, TYPE_SIMPLE, cacheSize, loader)
 
 	for i := 0; i < numbers; i++ {
 		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
@@ -64,7 +46,7 @@ func TestSimpleEvictItem(t *testing.T) {
 func TestSimpleUnboundedNoEviction(t *testing.T) {
 	numbers := 1000
 	size_tracker := 0
-	gcu := buildLoadingSimpleCache(0, loader)
+	gcu := buildTestLoadingCache(t, TYPE_SIMPLE, 0, loader)
 
 	for i := 0; i < numbers; i++ {
 		current_size := gcu.Len()
@@ -87,4 +69,37 @@ func TestSimpleGetIFPresent(t *testing.T) {
 
 func TestSimpleGetALL(t *testing.T) {
 	testGetALL(t, TYPE_SIMPLE)
+}
+
+func TestSimpleHas(t *testing.T) {
+	gc := buildTestLoadingCacheWithExpiration(t, TYPE_SIMPLE, 2, 10*time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			gc.Get("test1")
+			gc.Get("test2")
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if !gc.Has("test1") {
+				t.Fatal("should have test1")
+			}
+			if !gc.Has("test2") {
+				t.Fatal("should have test2")
+			}
+
+			time.Sleep(20 * time.Millisecond)
+
+			if gc.Has("test0") {
+				t.Fatal("should not have test0")
+			}
+			if gc.Has("test1") {
+				t.Fatal("should not have test1")
+			}
+			if gc.Has("test2") {
+				t.Fatal("should not have test2")
+			}
+		})
+	}
 }

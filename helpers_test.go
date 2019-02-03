@@ -95,3 +95,33 @@ func testGetALL(t *testing.T, evT string) {
 		t.Errorf("%v should contains key '%v'", m, size)
 	}
 }
+
+func getSimpleEvictedFunc(t *testing.T) func(interface{}, interface{}) {
+	return func(key, value interface{}) {
+		t.Logf("Key=%v Value=%v will be evicted.\n", key, value)
+	}
+}
+
+func buildTestCache(t *testing.T, tp string, size int) Cache {
+	return New(size).
+		EvictType(tp).
+		EvictedFunc(getSimpleEvictedFunc(t)).
+		Build()
+}
+
+func buildTestLoadingCache(t *testing.T, tp string, size int, loader LoaderFunc) Cache {
+	return New(size).
+		EvictType(tp).
+		LoaderFunc(loader).
+		EvictedFunc(getSimpleEvictedFunc(t)).
+		Build()
+}
+
+func buildTestLoadingCacheWithExpiration(t *testing.T, tp string, size int, ep time.Duration) Cache {
+	return New(size).
+		EvictType(tp).
+		Expiration(ep).
+		LoaderFunc(loader).
+		EvictedFunc(getSimpleEvictedFunc(t)).
+		Build()
+}
