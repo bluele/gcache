@@ -1,6 +1,8 @@
 package gcache
 
-import "time"
+import (
+	"time"
+)
 
 // SimpleCache has no clear priority for evict cache. It depends on key-value map order.
 type SimpleCache struct {
@@ -231,10 +233,10 @@ func (c *SimpleCache) keys() []interface{} {
 func (c *SimpleCache) GetALL(checkExpired bool) map[interface{}]interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	items := make(map[interface{}]interface{})
+	items := make(map[interface{}]interface{}, len(c.items))
 	now := time.Now()
 	for k, item := range c.items {
-		if checkExpired && c.has(k, &now) {
+		if !checkExpired || c.has(k, &now) {
 			items[k] = item.value
 		}
 	}
@@ -248,7 +250,7 @@ func (c *SimpleCache) Keys(checkExpired bool) []interface{} {
 	keys := make([]interface{}, 0, len(c.items))
 	now := time.Now()
 	for k := range c.items {
-		if checkExpired && c.has(k, &now) {
+		if !checkExpired || c.has(k, &now) {
 			keys = append(keys, k)
 		}
 	}

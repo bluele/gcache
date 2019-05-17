@@ -80,10 +80,6 @@ func TestARCGetIFPresent(t *testing.T) {
 	testGetIFPresent(t, TYPE_ARC)
 }
 
-func TestARCGetALL(t *testing.T) {
-	testGetALL(t, TYPE_ARC)
-}
-
 func TestARCHas(t *testing.T) {
 	gc := buildTestLoadingCacheWithExpiration(t, TYPE_ARC, 2, 10*time.Millisecond)
 

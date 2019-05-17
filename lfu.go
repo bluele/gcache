@@ -273,7 +273,7 @@ func (c *LFUCache) GetALL(checkExpired bool) map[interface{}]interface{} {
 	items := make(map[interface{}]interface{}, len(c.items))
 	now := time.Now()
 	for k, item := range c.items {
-		if checkExpired && c.has(k, &now) {
+		if !checkExpired || c.has(k, &now) {
 			items[k] = item.value
 		}
 	}
@@ -287,7 +287,7 @@ func (c *LFUCache) Keys(checkExpired bool) []interface{} {
 	keys := make([]interface{}, 0, len(c.items))
 	now := time.Now()
 	for k := range c.items {
-		if checkExpired && c.has(k, &now) {
+		if !checkExpired || c.has(k, &now) {
 			keys = append(keys, k)
 		}
 	}

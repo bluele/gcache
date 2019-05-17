@@ -67,10 +67,6 @@ func TestSimpleGetIFPresent(t *testing.T) {
 	testGetIFPresent(t, TYPE_SIMPLE)
 }
 
-func TestSimpleGetALL(t *testing.T) {
-	testGetALL(t, TYPE_SIMPLE)
-}
-
 func TestSimpleHas(t *testing.T) {
 	gc := buildTestLoadingCacheWithExpiration(t, TYPE_SIMPLE, 2, 10*time.Millisecond)
 

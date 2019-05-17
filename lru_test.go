@@ -47,10 +47,6 @@ func TestLRUGetIFPresent(t *testing.T) {
 	testGetIFPresent(t, TYPE_LRU)
 }
 
-func TestLRUGetALL(t *testing.T) {
-	testGetALL(t, TYPE_LRU)
-}
-
 func TestLRUHas(t *testing.T) {
 	gc := buildTestLoadingCacheWithExpiration(t, TYPE_LRU, 2, 10*time.Millisecond)
 
