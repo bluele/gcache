@@ -27,9 +27,9 @@ func TestLFULength(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_LFU, 1000, loader)
 	gc.Get("test1")
 	gc.Get("test2")
-	length := gc.Len()
+	length := gc.Len(true)
 	expectedLength := 2
-	if gc.Len() != expectedLength {
+	if length != expectedLength {
 		t.Errorf("Expected length is %v, not %v", length, expectedLength)
 	}
 }
@@ -49,10 +49,6 @@ func TestLFUEvictItem(t *testing.T) {
 
 func TestLFUGetIFPresent(t *testing.T) {
 	testGetIFPresent(t, TYPE_LFU)
-}
-
-func TestLFUGetALL(t *testing.T) {
-	testGetALL(t, TYPE_LFU)
 }
 
 func TestLFUHas(t *testing.T) {

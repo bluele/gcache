@@ -236,33 +236,49 @@ func (c *LRUCache) keys() []interface{} {
 	return keys
 }
 
+// GetALL returns all key-value pairs in the cache.
+func (c *LRUCache) GetALL(checkExpired bool) map[interface{}]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	items := make(map[interface{}]interface{}, len(c.items))
+	now := time.Now()
+	for k, item := range c.items {
+		if !checkExpired || c.has(k, &now) {
+			items[k] = item.Value.(*lruItem).value
+		}
+	}
+	return items
+}
+
 // Keys returns a slice of the keys in the cache.
-func (c *LRUCache) Keys() []interface{} {
-	keys := []interface{}{}
-	for _, k := range c.keys() {
-		_, err := c.GetIFPresent(k)
-		if err == nil {
+func (c *LRUCache) Keys(checkExpired bool) []interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	keys := make([]interface{}, 0, len(c.items))
+	now := time.Now()
+	for k := range c.items {
+		if !checkExpired || c.has(k, &now) {
 			keys = append(keys, k)
 		}
 	}
 	return keys
 }
 
-// GetALL returns all key-value pairs in the cache.
-func (c *LRUCache) GetALL() map[interface{}]interface{} {
-	m := make(map[interface{}]interface{})
-	for _, k := range c.keys() {
-		v, err := c.GetIFPresent(k)
-		if err == nil {
-			m[k] = v
+// Len returns the number of items in the cache.
+func (c *LRUCache) Len(checkExpired bool) int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if !checkExpired {
+		return len(c.items)
+	}
+	var length int
+	now := time.Now()
+	for k := range c.items {
+		if c.has(k, &now) {
+			length++
 		}
 	}
-	return m
-}
-
-// Len returns the number of items in the cache.
-func (c *LRUCache) Len() int {
-	return len(c.GetALL())
+	return length
 }
 
 // Completely clear the cache

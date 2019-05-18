@@ -265,3 +265,17 @@ func TestDeserializeFunc(t *testing.T) {
 		}
 	}
 }
+
+func TestExpiredItems(t *testing.T) {
+	var tps = []string{
+		TYPE_SIMPLE,
+		TYPE_LRU,
+		TYPE_LFU,
+		TYPE_ARC,
+	}
+	for _, tp := range tps {
+		t.Run(tp, func(t *testing.T) {
+			testExpiredItems(t, tp)
+		})
+	}
+}

@@ -17,17 +17,17 @@ const (
 var KeyNotFoundError = errors.New("Key not found.")
 
 type Cache interface {
-	Set(interface{}, interface{}) error
-	SetWithExpire(interface{}, interface{}, time.Duration) error
-	Get(interface{}) (interface{}, error)
-	GetIFPresent(interface{}) (interface{}, error)
-	GetALL() map[interface{}]interface{}
-	Has(interface{}) bool
-	get(interface{}, bool) (interface{}, error)
-	Remove(interface{}) bool
+	Set(key, value interface{}) error
+	SetWithExpire(key, value interface{}, expiration time.Duration) error
+	Get(key interface{}) (interface{}, error)
+	GetIFPresent(key interface{}) (interface{}, error)
+	GetALL(checkExpired bool) map[interface{}]interface{}
+	get(key interface{}, onLoad bool) (interface{}, error)
+	Remove(key interface{}) bool
 	Purge()
-	Keys() []interface{}
-	Len() int
+	Keys(checkExpired bool) []interface{}
+	Len(checkExpired bool) int
+	Has(key interface{}) bool
 
 	statsAccessor
 }

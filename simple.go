@@ -1,6 +1,8 @@
 package gcache
 
-import "time"
+import (
+	"time"
+)
 
 // SimpleCache has no clear priority for evict cache. It depends on key-value map order.
 type SimpleCache struct {
@@ -227,33 +229,49 @@ func (c *SimpleCache) keys() []interface{} {
 	return keys
 }
 
+// GetALL returns all key-value pairs in the cache.
+func (c *SimpleCache) GetALL(checkExpired bool) map[interface{}]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	items := make(map[interface{}]interface{}, len(c.items))
+	now := time.Now()
+	for k, item := range c.items {
+		if !checkExpired || c.has(k, &now) {
+			items[k] = item.value
+		}
+	}
+	return items
+}
+
 // Keys returns a slice of the keys in the cache.
-func (c *SimpleCache) Keys() []interface{} {
-	keys := []interface{}{}
-	for _, k := range c.keys() {
-		_, err := c.GetIFPresent(k)
-		if err == nil {
+func (c *SimpleCache) Keys(checkExpired bool) []interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	keys := make([]interface{}, 0, len(c.items))
+	now := time.Now()
+	for k := range c.items {
+		if !checkExpired || c.has(k, &now) {
 			keys = append(keys, k)
 		}
 	}
 	return keys
 }
 
-// GetALL returns all key-value pairs in the cache.
-func (c *SimpleCache) GetALL() map[interface{}]interface{} {
-	m := make(map[interface{}]interface{})
-	for _, k := range c.keys() {
-		v, err := c.GetIFPresent(k)
-		if err == nil {
-			m[k] = v
+// Len returns the number of items in the cache.
+func (c *SimpleCache) Len(checkExpired bool) int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if !checkExpired {
+		return len(c.items)
+	}
+	var length int
+	now := time.Now()
+	for k := range c.items {
+		if c.has(k, &now) {
+			length++
 		}
 	}
-	return m
-}
-
-// Len returns the number of items in the cache.
-func (c *SimpleCache) Len() int {
-	return len(c.GetALL())
+	return length
 }
 
 // Completely clear the cache
