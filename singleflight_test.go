@@ -28,7 +28,7 @@ import (
 func TestDo(t *testing.T) {
 	var g Group
 	g.cache = New(32).Build()
-	v, _, err := g.Do("key", func() (interface{}, error) {
+	v, _, err := g.Do(ctx, "key", func() (interface{}, error) {
 		return "bar", nil
 	}, true)
 	if got, want := fmt.Sprintf("%v (%T)", v, v), "bar (string)"; got != want {
@@ -43,7 +43,7 @@ func TestDoErr(t *testing.T) {
 	var g Group
 	g.cache = New(32).Build()
 	someErr := errors.New("Some error")
-	v, _, err := g.Do("key", func() (interface{}, error) {
+	v, _, err := g.Do(ctx, "key", func() (interface{}, error) {
 		return nil, someErr
 	}, true)
 	if err != someErr {
@@ -69,7 +69,7 @@ func TestDoDupSuppress(t *testing.T) {
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func() {
-			v, _, err := g.Do("key", fn, true)
+			v, _, err := g.Do(ctx, "key", fn, true)
 			if err != nil {
 				t.Errorf("Do error: %v", err)
 			}

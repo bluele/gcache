@@ -1,6 +1,7 @@
 package gcache
 
 import (
+	"context"
 	"testing"
 )
 
@@ -30,7 +31,7 @@ func TestStats(t *testing.T) {
 	}
 }
 
-func getter(key interface{}) (interface{}, error) {
+func getter(_ context.Context, key interface{}) (interface{}, error) {
 	return key, nil
 }
 
@@ -43,8 +44,8 @@ func TestCacheStats(t *testing.T) {
 			builder: func() Cache {
 				cc := New(32).Simple().Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -53,8 +54,8 @@ func TestCacheStats(t *testing.T) {
 			builder: func() Cache {
 				cc := New(32).LRU().Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -63,8 +64,8 @@ func TestCacheStats(t *testing.T) {
 			builder: func() Cache {
 				cc := New(32).LFU().Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -73,8 +74,8 @@ func TestCacheStats(t *testing.T) {
 			builder: func() Cache {
 				cc := New(32).ARC().Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -86,8 +87,8 @@ func TestCacheStats(t *testing.T) {
 					LoaderFunc(getter).
 					Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -99,8 +100,8 @@ func TestCacheStats(t *testing.T) {
 					LoaderFunc(getter).
 					Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -112,8 +113,8 @@ func TestCacheStats(t *testing.T) {
 					LoaderFunc(getter).
 					Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,
@@ -125,8 +126,8 @@ func TestCacheStats(t *testing.T) {
 					LoaderFunc(getter).
 					Build()
 				cc.Set(0, 0)
-				cc.Get(0)
-				cc.Get(1)
+				cc.Get(ctx, 0)
+				cc.Get(ctx, 1)
 				return cc
 			},
 			rate: 0.5,

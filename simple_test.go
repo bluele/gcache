@@ -21,8 +21,8 @@ func TestLoadingSimpleGet(t *testing.T) {
 
 func TestSimpleLength(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_SIMPLE, 1000, loader)
-	gc.Get("test1")
-	gc.Get("test2")
+	gc.Get(ctx, "test1")
+	gc.Get(ctx, "test2")
 	length := gc.Len(true)
 	expectedLength := 2
 	if length != expectedLength {
@@ -36,7 +36,7 @@ func TestSimpleEvictItem(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_SIMPLE, cacheSize, loader)
 
 	for i := 0; i < numbers; i++ {
-		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
+		_, err := gc.Get(ctx, fmt.Sprintf("Key-%d", i))
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -54,7 +54,7 @@ func TestSimpleUnboundedNoEviction(t *testing.T) {
 			t.Errorf("Excepted cache size is %v not %v", current_size, size_tracker)
 		}
 
-		_, err := gcu.Get(fmt.Sprintf("Key-%d", i))
+		_, err := gcu.Get(ctx, fmt.Sprintf("Key-%d", i))
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -72,8 +72,8 @@ func TestSimpleHas(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			gc.Get("test1")
-			gc.Get("test2")
+			gc.Get(ctx, "test1")
+			gc.Get(ctx, "test2")
 
 			if gc.Has("test0") {
 				t.Fatal("should not have test0")

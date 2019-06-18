@@ -2,6 +2,7 @@ package gcache
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"sync"
 	"sync/atomic"
@@ -21,7 +22,7 @@ func TestLoaderFunc(t *testing.T) {
 		var testCounter int64
 		counter := 1000
 		cache := builder.
-			LoaderFunc(func(key interface{}) (interface{}, error) {
+			LoaderFunc(func(_ context.Context, key interface{}) (interface{}, error) {
 				time.Sleep(10 * time.Millisecond)
 				return atomic.AddInt64(&testCounter, 1), nil
 			}).
@@ -34,7 +35,7 @@ func TestLoaderFunc(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_, err := cache.Get(0)
+				_, err := cache.Get(ctx, 0)
 				if err != nil {
 					t.Error(err)
 				}
@@ -60,7 +61,7 @@ func TestLoaderExpireFuncWithoutExpire(t *testing.T) {
 		var testCounter int64
 		counter := 1000
 		cache := builder.
-			LoaderExpireFunc(func(key interface{}) (interface{}, *time.Duration, error) {
+			LoaderExpireFunc(func(_ context.Context, key interface{}) (interface{}, *time.Duration, error) {
 				return atomic.AddInt64(&testCounter, 1), nil, nil
 			}).
 			EvictedFunc(func(key, value interface{}) {
@@ -72,7 +73,7 @@ func TestLoaderExpireFuncWithoutExpire(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_, err := cache.Get(0)
+				_, err := cache.Get(ctx, 0)
 				if err != nil {
 					t.Error(err)
 				}
@@ -100,7 +101,7 @@ func TestLoaderExpireFuncWithExpire(t *testing.T) {
 		counter := 1000
 		expire := 200 * time.Millisecond
 		cache := builder.
-			LoaderExpireFunc(func(key interface{}) (interface{}, *time.Duration, error) {
+			LoaderExpireFunc(func(_ context.Context, key interface{}) (interface{}, *time.Duration, error) {
 				return atomic.AddInt64(&testCounter, 1), &expire, nil
 			}).
 			Build()
@@ -110,7 +111,7 @@ func TestLoaderExpireFuncWithExpire(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_, err := cache.Get(0)
+				_, err := cache.Get(ctx, 0)
 				if err != nil {
 					t.Error(err)
 				}
@@ -121,7 +122,7 @@ func TestLoaderExpireFuncWithExpire(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_, err := cache.Get(0)
+				_, err := cache.Get(ctx, 0)
 				if err != nil {
 					t.Error(err)
 				}
@@ -164,7 +165,7 @@ func TestLoaderPurgeVisitorFunc(t *testing.T) {
 		var purgeCounter, evictCounter, loaderCounter int64
 		counter := 1000
 		cache := test.cacheBuilder.
-			LoaderFunc(func(key interface{}) (interface{}, error) {
+			LoaderFunc(func(_ context.Context, key interface{}) (interface{}, error) {
 				return atomic.AddInt64(&loaderCounter, 1), nil
 			}).
 			EvictedFunc(func(key, value interface{}) {
@@ -181,7 +182,7 @@ func TestLoaderPurgeVisitorFunc(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_, err := cache.Get(i)
+				_, err := cache.Get(ctx, i)
 				if err != nil {
 					t.Error(err)
 				}
@@ -220,7 +221,7 @@ func TestDeserializeFunc(t *testing.T) {
 		key2, value2 := "key2", "value2"
 		cc := New(32).
 			EvictType(cs.tp).
-			LoaderFunc(func(k interface{}) (interface{}, error) {
+			LoaderFunc(func(_ context.Context, k interface{}) (interface{}, error) {
 				return value1, nil
 			}).
 			DeserializeFunc(func(k, v interface{}) (interface{}, error) {
@@ -239,14 +240,14 @@ func TestDeserializeFunc(t *testing.T) {
 				return buf.Bytes(), err
 			}).
 			Build()
-		v, err := cc.Get(key1)
+		v, err := cc.Get(ctx, key1)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if v != value1 {
 			t.Errorf("%v != %v", v, value1)
 		}
-		v, err = cc.Get(key1)
+		v, err = cc.Get(ctx, key1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -256,7 +257,7 @@ func TestDeserializeFunc(t *testing.T) {
 		if err := cc.Set(key2, value2); err != nil {
 			t.Error(err)
 		}
-		v, err = cc.Get(key2)
+		v, err = cc.Get(ctx, key2)
 		if err != nil {
 			t.Error(err)
 		}

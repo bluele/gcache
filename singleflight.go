@@ -19,13 +19,16 @@ limitations under the License.
 // This module provides a duplicate function call suppression
 // mechanism.
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 // call is an in-flight or completed Do call
 type call struct {
-	wg  sync.WaitGroup
-	val interface{}
-	err error
+	ready chan struct{}
+	val   interface{}
+	err   error
 }
 
 // Group represents a class of work and forms a namespace in which
@@ -40,7 +43,7 @@ type Group struct {
 // sure that only one execution is in-flight for a given key at a
 // time. If a duplicate comes in, the duplicate caller waits for the
 // original to complete and receives the same results.
-func (g *Group) Do(key interface{}, fn func() (interface{}, error), isWait bool) (interface{}, bool, error) {
+func (g *Group) Do(ctx context.Context, key interface{}, fn func() (interface{}, error), isWait bool) (interface{}, bool, error) {
 	g.mu.Lock()
 	v, err := g.cache.get(key, true)
 	if err == nil {
@@ -55,11 +58,15 @@ func (g *Group) Do(key interface{}, fn func() (interface{}, error), isWait bool)
 		if !isWait {
 			return nil, false, KeyNotFoundError
 		}
-		c.wg.Wait()
-		return c.val, false, c.err
+		select {
+		case <-ctx.Done():
+			return nil, false, ctx.Err()
+		case <-c.ready:
+			return c.val, false, c.err
+		}
 	}
 	c := new(call)
-	c.wg.Add(1)
+	c.ready = make(chan struct{})
 	g.m[key] = c
 	g.mu.Unlock()
 	if !isWait {
@@ -72,7 +79,7 @@ func (g *Group) Do(key interface{}, fn func() (interface{}, error), isWait bool)
 
 func (g *Group) call(c *call, key interface{}, fn func() (interface{}, error)) (interface{}, error) {
 	c.val, c.err = fn()
-	c.wg.Done()
+	close(c.ready)
 
 	g.mu.Lock()
 	delete(g.m, key)
