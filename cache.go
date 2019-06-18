@@ -1,6 +1,7 @@
 package gcache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -19,8 +20,8 @@ var KeyNotFoundError = errors.New("Key not found.")
 type Cache interface {
 	Set(key, value interface{}) error
 	SetWithExpire(key, value interface{}, expiration time.Duration) error
-	Get(key interface{}) (interface{}, error)
-	GetIFPresent(key interface{}) (interface{}, error)
+	Get(ctx context.Context, key interface{}) (interface{}, error)
+	GetIFPresent(ctx context.Context, key interface{}) (interface{}, error)
 	GetALL(checkExpired bool) map[interface{}]interface{}
 	get(key interface{}, onLoad bool) (interface{}, error)
 	Remove(key interface{}) bool
@@ -48,8 +49,8 @@ type baseCache struct {
 }
 
 type (
-	LoaderFunc       func(interface{}) (interface{}, error)
-	LoaderExpireFunc func(interface{}) (interface{}, *time.Duration, error)
+	LoaderFunc       func(context.Context, interface{}) (interface{}, error)
+	LoaderExpireFunc func(context.Context, interface{}) (interface{}, *time.Duration, error)
 	EvictedFunc      func(interface{}, interface{})
 	PurgeVisitorFunc func(interface{}, interface{})
 	AddedFunc        func(interface{}, interface{})
@@ -86,8 +87,8 @@ func (cb *CacheBuilder) Clock(clock Clock) *CacheBuilder {
 // Set a loader function.
 // loaderFunc: create a new value with this function if cached value is expired.
 func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
-	cb.loaderExpireFunc = func(k interface{}) (interface{}, *time.Duration, error) {
-		v, err := loaderFunc(k)
+	cb.loaderExpireFunc = func(ctx context.Context, k interface{}) (interface{}, *time.Duration, error) {
+		v, err := loaderFunc(ctx, k)
 		return v, nil, err
 	}
 	return cb
@@ -189,14 +190,14 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 }
 
 // load a new value using by specified key.
-func (c *baseCache) load(key interface{}, cb func(interface{}, *time.Duration, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
-	v, called, err := c.loadGroup.Do(key, func() (v interface{}, e error) {
+func (c *baseCache) load(ctx context.Context, key interface{}, cb func(interface{}, *time.Duration, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
+	v, called, err := c.loadGroup.Do(ctx, key, func() (v interface{}, e error) {
 		defer func() {
 			if r := recover(); r != nil {
 				e = fmt.Errorf("Loader panics: %v", r)
 			}
 		}()
-		return cb(c.loaderExpireFunc(key))
+		return cb(c.loaderExpireFunc(ctx, key))
 	}, isWait)
 	if err != nil {
 		return nil, called, err

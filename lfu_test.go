@@ -25,8 +25,8 @@ func TestLoadingLFUGet(t *testing.T) {
 
 func TestLFULength(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_LFU, 1000, loader)
-	gc.Get("test1")
-	gc.Get("test2")
+	gc.Get(ctx, "test1")
+	gc.Get(ctx, "test2")
 	length := gc.Len(true)
 	expectedLength := 2
 	if length != expectedLength {
@@ -40,7 +40,7 @@ func TestLFUEvictItem(t *testing.T) {
 	gc := buildTestLoadingCache(t, TYPE_LFU, cacheSize, loader)
 
 	for i := 0; i < numbers; i++ {
-		_, err := gc.Get(fmt.Sprintf("Key-%d", i))
+		_, err := gc.Get(ctx, fmt.Sprintf("Key-%d", i))
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -56,8 +56,8 @@ func TestLFUHas(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			gc.Get("test1")
-			gc.Get("test2")
+			gc.Get(ctx, "test1")
+			gc.Get(ctx, "test2")
 
 			if gc.Has("test0") {
 				t.Fatal("should not have test0")
