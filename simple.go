@@ -93,6 +93,9 @@ func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
 	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
 		return c.getWithLoader(key, true)
+	} else if err == KeyExpireError {
+		go c.getWithLoader(key, true)
+		return v, nil
 	}
 	return v, err
 }
@@ -104,40 +107,51 @@ func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
 	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
 		return c.getWithLoader(key, false)
+	} else if err == KeyExpireError {
+		go c.getWithLoader(key, false)
+		return v, nil
 	}
 	return v, nil
 }
 
 func (c *SimpleCache) get(key interface{}, onLoad bool) (interface{}, error) {
 	v, err := c.getValue(key, onLoad)
-	if err != nil {
+	if err == KeyNotFoundError {
 		return nil, err
 	}
 	if c.deserializeFunc != nil {
 		return c.deserializeFunc(key, v)
 	}
-	return v, nil
+	return v, err
 }
 
-func (c *SimpleCache) getValue(key interface{}, onLoad bool) (interface{}, error) {
+func (c *SimpleCache) getValue(key interface{}, onLoad bool) (v interface{}, err error) {
 	c.mu.Lock()
 	item, ok := c.items[key]
 	if ok {
+		v = item.value
 		if !item.IsExpired(nil) {
-			v := item.value
 			c.mu.Unlock()
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
-			return v, nil
+			return
 		}
-		c.remove(key)
+		if !c.asyncLoad {
+			c.remove(key)
+			v = nil
+			err = KeyNotFoundError
+		} else {
+			err = KeyExpireError
+		}
+	} else {
+		err = KeyNotFoundError
 	}
 	c.mu.Unlock()
 	if !onLoad {
 		c.stats.IncrMissCount()
 	}
-	return nil, KeyNotFoundError
+	return
 }
 
 func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {

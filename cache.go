@@ -15,6 +15,7 @@ const (
 )
 
 var KeyNotFoundError = errors.New("Key not found.")
+var KeyExpireError = errors.New("Key expired.")
 
 type Cache interface {
 	Set(key, value interface{}) error
@@ -35,6 +36,7 @@ type Cache interface {
 type baseCache struct {
 	clock            Clock
 	size             int
+	asyncLoad		 bool
 	loaderExpireFunc LoaderExpireFunc
 	evictedFunc      EvictedFunc
 	purgeVisitorFunc PurgeVisitorFunc
@@ -61,6 +63,7 @@ type CacheBuilder struct {
 	clock            Clock
 	tp               string
 	size             int
+	asyncLoad		 bool
 	loaderExpireFunc LoaderExpireFunc
 	evictedFunc      EvictedFunc
 	purgeVisitorFunc PurgeVisitorFunc
@@ -96,8 +99,9 @@ func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
 // Set a loader function with expiration.
 // loaderExpireFunc: create a new value with this function if cached value is expired.
 // If nil returned instead of time.Duration from loaderExpireFunc than value will never expire.
-func (cb *CacheBuilder) LoaderExpireFunc(loaderExpireFunc LoaderExpireFunc) *CacheBuilder {
+func (cb *CacheBuilder) LoaderExpireFunc(loaderExpireFunc LoaderExpireFunc, asyncLoad bool) *CacheBuilder {
 	cb.loaderExpireFunc = loaderExpireFunc
+	cb.asyncLoad = asyncLoad
 	return cb
 }
 
@@ -153,10 +157,14 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 }
 
 func (cb *CacheBuilder) Build() Cache {
-	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
-		panic("gcache: Cache size <= 0")
+	if cb.tp != TYPE_SIMPLE {
+		if cb.size <= 0 {
+			panic("gcache: Cache size <= 0")
+		}
+		if cb.asyncLoad {
+			panic("gcache: asyncLoad only support simple cache")
+		}
 	}
-
 	return cb.build()
 }
 
@@ -178,6 +186,7 @@ func (cb *CacheBuilder) build() Cache {
 func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.clock = cb.clock
 	c.size = cb.size
+	c.asyncLoad = cb.asyncLoad
 	c.loaderExpireFunc = cb.loaderExpireFunc
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
