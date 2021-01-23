@@ -2,6 +2,7 @@ package gcache
 
 import (
 	"container/list"
+	"errors"
 	"time"
 )
 
@@ -356,6 +357,11 @@ func (c *ARC) Len(checkExpired bool) int {
 		}
 	}
 	return length
+}
+
+// Increment an item
+func (c *ARC) Increment(k interface{}, n int64) (interface{}, error) {
+	return nil, errors.New("method not implemented")
 }
 
 // Purge is used to completely clear the cache

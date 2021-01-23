@@ -2,6 +2,7 @@ package gcache
 
 import (
 	"container/list"
+	"errors"
 	"time"
 )
 
@@ -309,6 +310,11 @@ func (c *LFUCache) Len(checkExpired bool) int {
 		}
 	}
 	return length
+}
+
+// Increment an item
+func (c *LFUCache) Increment(k interface{}, n int64) (interface{}, error) {
+	return nil, errors.New("method not implemented")
 }
 
 // Completely clear the cache
