@@ -5,7 +5,7 @@ import (
 	"github.com/bluele/gcache"
 )
 
-func main() {
+func main3() {
 	gc := gcache.New(10).
 		LFU().
 		Build()

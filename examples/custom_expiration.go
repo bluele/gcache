@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func main() {
+func main2() {
 	gc := gcache.New(10).
 		LFU().
 		Build()

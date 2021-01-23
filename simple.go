@@ -1,6 +1,7 @@
 package gcache
 
 import (
+	"errors"
 	"time"
 )
 
@@ -272,6 +273,11 @@ func (c *SimpleCache) Len(checkExpired bool) int {
 		}
 	}
 	return length
+}
+
+// Increment an item
+func (c *SimpleCache) Increment(k interface{}, n int64) (interface{}, error) {
+	return nil, errors.New("method not implemented")
 }
 
 // Completely clear the cache

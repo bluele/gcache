@@ -8,8 +8,9 @@ import (
 // Discards the least recently used items first.
 type LRUCache struct {
 	baseCache
-	items     map[interface{}]*list.Element
-	evictList *list.List
+	items       map[interface{}]*list.Element
+	evictList   *list.List
+	incrementer *LRUIncrementer
 }
 
 func newLRUCache(cb *CacheBuilder) *LRUCache {
@@ -18,6 +19,7 @@ func newLRUCache(cb *CacheBuilder) *LRUCache {
 
 	c.init()
 	c.loadGroup.cache = c
+	c.incrementer = newLRUIncrementer(c)
 	return c
 }
 
@@ -279,6 +281,11 @@ func (c *LRUCache) Len(checkExpired bool) int {
 		}
 	}
 	return length
+}
+
+// Increment an item
+func (c *LRUCache) Increment(k interface{}, n int64) (interface{}, error) {
+	return c.incrementer.Increment(k, n)
 }
 
 // Completely clear the cache
