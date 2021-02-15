@@ -83,3 +83,113 @@ func TestLFUHas(t *testing.T) {
 		})
 	}
 }
+
+func TestLFUFreqListOrder(t *testing.T) {
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		for i := 0; i < 5; i++ {
+			gc.Set(i, i)
+			for j := 0; j <= i; j++ {
+				gc.Get(i)
+			}
+		}
+		if l := gc.(*LFUCache).freqList.Len(); l != 6 {
+			t.Fatalf("%v != 6", l)
+		}
+		var i uint
+		for e := gc.(*LFUCache).freqList.Front(); e != nil; e = e.Next() {
+			if e.Value.(*freqEntry).freq != i {
+				t.Fatalf("%v != %v", e.Value.(*freqEntry).freq, i)
+			}
+			i++
+		}
+	}
+
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		for i := 4; i >= 0; i-- {
+			gc.Set(i, i)
+			for j := 0; j <= i; j++ {
+				gc.Get(i)
+			}
+		}
+		if l := gc.(*LFUCache).freqList.Len(); l != 6 {
+			t.Fatalf("%v != 6", l)
+		}
+		var i uint
+		for e := gc.(*LFUCache).freqList.Front(); e != nil; e = e.Next() {
+			if e.Value.(*freqEntry).freq != i {
+				t.Fatalf("%v != %v", e.Value.(*freqEntry).freq, i)
+			}
+			i++
+		}
+	}
+}
+
+func TestLFUFreqListLength(t *testing.T) {
+	k0, v0 := "k0", "v0"
+	k1, v1 := "k1", "v1"
+
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		if l := gc.(*LFUCache).freqList.Len(); l != 1 {
+			t.Fatalf("%v != 1", l)
+		}
+	}
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		gc.Set(k0, v0)
+		for i := 0; i < 5; i++ {
+			gc.Get(k0)
+		}
+		if l := gc.(*LFUCache).freqList.Len(); l != 2 {
+			t.Fatalf("%v != 2", l)
+		}
+	}
+
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		gc.Set(k0, v0)
+		gc.Set(k1, v1)
+		for i := 0; i < 5; i++ {
+			gc.Get(k0)
+			gc.Get(k1)
+		}
+		if l := gc.(*LFUCache).freqList.Len(); l != 2 {
+			t.Fatalf("%v != 2", l)
+		}
+	}
+
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		gc.Set(k0, v0)
+		gc.Set(k1, v1)
+		for i := 0; i < 5; i++ {
+			gc.Get(k0)
+		}
+		for i := 0; i < 5; i++ {
+			gc.Get(k1)
+		}
+		if l := gc.(*LFUCache).freqList.Len(); l != 2 {
+			t.Fatalf("%v != 2", l)
+		}
+	}
+
+	{
+		gc := buildTestCache(t, TYPE_LFU, 5)
+		gc.Set(k0, v0)
+		gc.Get(k0)
+		gc.Remove(k0)
+		if l := gc.(*LFUCache).freqList.Len(); l != 1 {
+			t.Fatalf("%v != 1", l)
+		}
+		gc.Set(k0, v0)
+		if l := gc.(*LFUCache).freqList.Len(); l != 1 {
+			t.Fatalf("%v != 1", l)
+		}
+		gc.Get(k0)
+		if l := gc.(*LFUCache).freqList.Len(); l != 2 {
+			t.Fatalf("%v != 2", l)
+		}
+	}
+}
