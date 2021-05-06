@@ -42,6 +42,7 @@ type baseCache struct {
 	deserializeFunc  DeserializeFunc
 	serializeFunc    SerializeFunc
 	expiration       *time.Duration
+	expireCheckInterval      *time.Duration
 	mu               sync.RWMutex
 	loadGroup        Group
 	*stats
@@ -66,6 +67,7 @@ type CacheBuilder struct {
 	purgeVisitorFunc PurgeVisitorFunc
 	addedFunc        AddedFunc
 	expiration       *time.Duration
+	expireCheckInterval      *time.Duration
 	deserializeFunc  DeserializeFunc
 	serializeFunc    SerializeFunc
 }
@@ -152,6 +154,11 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 	return cb
 }
 
+func (cb *CacheBuilder) ExpireCheckInterval(expireCheckInterval time.Duration) *CacheBuilder {
+	cb.expireCheckInterval = &expireCheckInterval
+	return cb
+}
+
 func (cb *CacheBuilder) Build() Cache {
 	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
 		panic("gcache: Cache size <= 0")
@@ -185,6 +192,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.serializeFunc = cb.serializeFunc
 	c.evictedFunc = cb.evictedFunc
 	c.purgeVisitorFunc = cb.purgeVisitorFunc
+	c.expireCheckInterval = cb.expireCheckInterval
 	c.stats = &stats{}
 }
 

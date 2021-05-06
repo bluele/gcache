@@ -24,6 +24,31 @@ func newLRUCache(cb *CacheBuilder) *LRUCache {
 func (c *LRUCache) init() {
 	c.evictList = list.New()
 	c.items = make(map[interface{}]*list.Element, c.size+1)
+
+	if c.expireCheckInterval != nil && *c.expireCheckInterval != 0 {
+		go func() {
+			for range time.Tick(*c.expireCheckInterval) {
+				for key := range c.items {
+					now := time.Now()
+					c.checkAndDeleteExpire(key, &now)
+				}
+			}
+		}()
+	}
+}
+
+func (c *LRUCache) checkAndDeleteExpire(key interface{}, now *time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	item, ok := c.items[key]
+	if !ok {
+		return
+	}
+
+	if item.Value.(*lruItem).IsExpired(now) {
+		c.remove(key)
+	}
 }
 
 func (c *LRUCache) set(key, value interface{}) (interface{}, error) {
