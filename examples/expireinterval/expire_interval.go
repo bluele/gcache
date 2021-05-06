@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func main () {
+func main() {
 	gc := gcache.New(10).
 		LRU().
 		EvictedFunc(func(key, value interface{}) {

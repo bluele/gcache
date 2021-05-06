@@ -33,18 +33,18 @@ type Cache interface {
 }
 
 type baseCache struct {
-	clock            Clock
-	size             int
-	loaderExpireFunc LoaderExpireFunc
-	evictedFunc      EvictedFunc
-	purgeVisitorFunc PurgeVisitorFunc
-	addedFunc        AddedFunc
-	deserializeFunc  DeserializeFunc
-	serializeFunc    SerializeFunc
-	expiration       *time.Duration
-	expireCheckInterval      *time.Duration
-	mu               sync.RWMutex
-	loadGroup        Group
+	clock               Clock
+	size                int
+	loaderExpireFunc    LoaderExpireFunc
+	evictedFunc         EvictedFunc
+	purgeVisitorFunc    PurgeVisitorFunc
+	addedFunc           AddedFunc
+	deserializeFunc     DeserializeFunc
+	serializeFunc       SerializeFunc
+	expiration          *time.Duration
+	expireCheckInterval *time.Duration
+	mu                  sync.RWMutex
+	loadGroup           Group
 	*stats
 }
 
@@ -59,17 +59,17 @@ type (
 )
 
 type CacheBuilder struct {
-	clock            Clock
-	tp               string
-	size             int
-	loaderExpireFunc LoaderExpireFunc
-	evictedFunc      EvictedFunc
-	purgeVisitorFunc PurgeVisitorFunc
-	addedFunc        AddedFunc
-	expiration       *time.Duration
-	expireCheckInterval      *time.Duration
-	deserializeFunc  DeserializeFunc
-	serializeFunc    SerializeFunc
+	clock               Clock
+	tp                  string
+	size                int
+	loaderExpireFunc    LoaderExpireFunc
+	evictedFunc         EvictedFunc
+	purgeVisitorFunc    PurgeVisitorFunc
+	addedFunc           AddedFunc
+	expiration          *time.Duration
+	expireCheckInterval *time.Duration
+	deserializeFunc     DeserializeFunc
+	serializeFunc       SerializeFunc
 }
 
 func New(size int) *CacheBuilder {
