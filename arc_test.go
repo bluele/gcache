@@ -112,3 +112,73 @@ func TestARCHas(t *testing.T) {
 		})
 	}
 }
+
+func TestARCSizer(t *testing.T) {
+	var evicts int
+	evict := func(k, v interface{}) {
+		evicts++
+	}
+	c := New(3).ARC().EvictedFunc(evict).Build()
+
+	c.Set(1, sizerInt(1))
+	c.Set(2, sizerInt(2))
+
+	v, _ := c.Get(2)
+	if v != sizerInt(2) {
+		t.Fatal(v)
+	}
+
+	if evicts != 0 {
+		t.Fatal(evicts)
+	}
+	if l := c.Len(false); l != 3 {
+		t.Fatal(l)
+	}
+
+	c.Set(3, sizerInt(3))
+
+	if evicts != 1 {
+		t.Fatal(evicts)
+	}
+	if l := c.Len(false); l != 5 {
+		t.Fatal(l)
+	}
+
+	c.Set(4, sizerInt(4))
+
+	if evicts != 2 {
+		t.Fatal(evicts)
+	}
+	if l := c.Len(false); l != 6 {
+		t.Fatal(l)
+	}
+
+	c.Set(6, sizerInt(6))
+
+	if evicts != 3 {
+		t.Fatal(evicts)
+	}
+	if l := c.Len(false); l != 8 {
+		t.Fatal(l)
+	}
+
+	v, _ = c.Get(6)
+	if v != sizerInt(6) {
+		t.Fatal(v)
+	}
+
+	c.Set(7, sizerInt(7))
+
+	if evicts != 5 {
+		t.Fatal(evicts)
+	}
+	if l := c.Len(false); l != 7 {
+		t.Fatal(l)
+	}
+}
+
+type sizerInt int
+
+func (s sizerInt) Size() int {
+	return int(s)
+}

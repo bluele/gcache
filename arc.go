@@ -40,14 +40,17 @@ func (c *ARC) replace(key interface{}) {
 	}
 	var old interface{}
 	if c.t1.Len() > 0 && ((c.b2.Has(key) && c.t1.Len() == c.part) || (c.t1.Len() > c.part)) {
-		old = c.t1.RemoveTail()
-		c.b1.PushFront(old)
+		k, s := c.t1.RemoveTail()
+		old = k
+		c.b1.PushFront(k, s)
 	} else if c.t2.Len() > 0 {
-		old = c.t2.RemoveTail()
-		c.b2.PushFront(old)
+		k, s := c.t2.RemoveTail()
+		old = k
+		c.b2.PushFront(k, s)
 	} else {
-		old = c.t1.RemoveTail()
-		c.b1.PushFront(old)
+		k, s := c.t1.RemoveTail()
+		old = k
+		c.b1.PushFront(k, s)
 	}
 	item, ok := c.items[old]
 	if ok {
@@ -91,11 +94,13 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 	item, ok := c.items[key]
 	if ok {
 		item.value = value
+		item.size = getSize(value)
 	} else {
 		item = &arcItem{
 			clock: c.clock,
 			key:   key,
 			value: value,
+			size:  getSize(value),
 		}
 		c.items[key] = item
 	}
@@ -119,7 +124,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 		c.setPart(minInt(c.size, c.part+maxInt(c.b2.Len()/c.b1.Len(), 1)))
 		c.replace(key)
 		c.b1.Remove(key, elt)
-		c.t2.PushFront(key)
+		c.t2.PushFront(key, item.size)
 		return item, nil
 	}
 
@@ -127,38 +132,40 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 		c.setPart(maxInt(0, c.part-maxInt(c.b1.Len()/c.b2.Len(), 1)))
 		c.replace(key)
 		c.b2.Remove(key, elt)
-		c.t2.PushFront(key)
+		c.t2.PushFront(key, item.size)
 		return item, nil
 	}
 
-	if c.isCacheFull() && c.t1.Len()+c.b1.Len() == c.size {
-		if c.t1.Len() < c.size {
-			c.b1.RemoveTail()
-			c.replace(key)
+	for c.isCacheFull() {
+		if c.t1.Len()+c.b1.Len() >= c.size {
+			if c.t1.Len() < c.size {
+				c.b1.RemoveTail()
+				c.replace(key)
+			} else {
+				pop, _ := c.t1.RemoveTail()
+				item, ok := c.items[pop]
+				if ok {
+					delete(c.items, pop)
+					if c.evictedFunc != nil {
+						c.evictedFunc(item.key, item.value)
+					}
+				}
+			}
 		} else {
-			pop := c.t1.RemoveTail()
-			item, ok := c.items[pop]
-			if ok {
-				delete(c.items, pop)
-				if c.evictedFunc != nil {
-					c.evictedFunc(item.key, item.value)
+			total := c.t1.Len() + c.b1.Len() + c.t2.Len() + c.b2.Len()
+			if total >= c.size {
+				if total >= (2 * c.size) {
+					if c.b2.Len() > 0 {
+						c.b2.RemoveTail()
+					} else {
+						c.b1.RemoveTail()
+					}
 				}
+				c.replace(key)
 			}
-		}
-	} else {
-		total := c.t1.Len() + c.b1.Len() + c.t2.Len() + c.b2.Len()
-		if total >= c.size {
-			if total == (2 * c.size) {
-				if c.b2.Len() > 0 {
-					c.b2.RemoveTail()
-				} else {
-					c.b1.RemoveTail()
-				}
-			}
-			c.replace(key)
 		}
 	}
-	c.t1.PushFront(key)
+	c.t1.PushFront(key, item.size)
 	return item, nil
 }
 
@@ -200,14 +207,14 @@ func (c *ARC) getValue(key interface{}, onLoad bool) (interface{}, error) {
 		c.t1.Remove(key, elt)
 		item := c.items[key]
 		if !item.IsExpired(nil) {
-			c.t2.PushFront(key)
+			c.t2.PushFront(key, item.size)
 			if !onLoad {
 				c.stats.IncrHitCount()
 			}
 			return item.value, nil
 		} else {
 			delete(c.items, key)
-			c.b1.PushFront(key)
+			c.b1.PushFront(key, item.size)
 			if c.evictedFunc != nil {
 				c.evictedFunc(item.key, item.value)
 			}
@@ -224,7 +231,7 @@ func (c *ARC) getValue(key interface{}, onLoad bool) (interface{}, error) {
 		} else {
 			delete(c.items, key)
 			c.t2.Remove(key, elt)
-			c.b2.PushFront(key)
+			c.b2.PushFront(key, item.size)
 			if c.evictedFunc != nil {
 				c.evictedFunc(item.key, item.value)
 			}
@@ -292,7 +299,7 @@ func (c *ARC) remove(key interface{}) bool {
 		c.t1.Remove(key, elt)
 		item := c.items[key]
 		delete(c.items, key)
-		c.b1.PushFront(key)
+		c.b1.PushFront(key, item.size)
 		if c.evictedFunc != nil {
 			c.evictedFunc(key, item.value)
 		}
@@ -303,7 +310,7 @@ func (c *ARC) remove(key interface{}) bool {
 		c.t2.Remove(key, elt)
 		item := c.items[key]
 		delete(c.items, key)
-		c.b2.PushFront(key)
+		c.b2.PushFront(key, item.size)
 		if c.evictedFunc != nil {
 			c.evictedFunc(key, item.value)
 		}
@@ -345,14 +352,16 @@ func (c *ARC) Keys(checkExpired bool) []interface{} {
 func (c *ARC) Len(checkExpired bool) int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
 	if !checkExpired {
-		return len(c.items)
+		return c.t1.Len() + c.t2.Len()
 	}
+
 	var length int
 	now := time.Now()
-	for k := range c.items {
+	for k, v := range c.items {
 		if c.has(k, &now) {
-			length++
+			length += v.size
 		}
 	}
 	return length
@@ -379,7 +388,7 @@ func (c *ARC) setPart(p int) {
 }
 
 func (c *ARC) isCacheFull() bool {
-	return (c.t1.Len() + c.t2.Len()) == c.size
+	return (c.t1.Len() + c.t2.Len()) >= c.size
 }
 
 // IsExpired returns boolean value whether this item is expired or not.
@@ -394,15 +403,34 @@ func (it *arcItem) IsExpired(now *time.Time) bool {
 	return it.expiration.Before(*now)
 }
 
+type Sizer interface {
+	Size() int
+}
+
+func getSize(v interface{}) int {
+	s, ok := v.(Sizer)
+	if !ok {
+		return 1
+	}
+	return s.Size()
+}
+
+type arcListItem struct {
+	key  interface{}
+	size int
+}
+
 type arcList struct {
 	l    *list.List
 	keys map[interface{}]*list.Element
+	size int
 }
 
 type arcItem struct {
 	clock      Clock
 	key        interface{}
 	value      interface{}
+	size       int
 	expiration *time.Time
 }
 
@@ -427,30 +455,34 @@ func (al *arcList) MoveToFront(elt *list.Element) {
 	al.l.MoveToFront(elt)
 }
 
-func (al *arcList) PushFront(key interface{}) {
+func (al *arcList) PushFront(key interface{}, size int) {
 	if elt, ok := al.keys[key]; ok {
 		al.l.MoveToFront(elt)
 		return
 	}
-	elt := al.l.PushFront(key)
+
+	elt := al.l.PushFront(arcListItem{key, size})
 	al.keys[key] = elt
+	al.size += size
 }
 
 func (al *arcList) Remove(key interface{}, elt *list.Element) {
 	delete(al.keys, key)
 	al.l.Remove(elt)
+	al.size -= elt.Value.(arcListItem).size
 }
 
-func (al *arcList) RemoveTail() interface{} {
+func (al *arcList) RemoveTail() (key interface{}, size int) {
 	elt := al.l.Back()
 	al.l.Remove(elt)
 
-	key := elt.Value
-	delete(al.keys, key)
+	item := elt.Value.(arcListItem)
+	delete(al.keys, item.key)
+	al.size -= item.size
 
-	return key
+	return item.key, item.size
 }
 
 func (al *arcList) Len() int {
-	return al.l.Len()
+	return al.size
 }
