@@ -72,7 +72,7 @@ func main() {
   // Wait for value to expire
   time.Sleep(time.Second*10)
 
-  value, err = gc.Get("key")
+  value, err = gc.Get("key")// Will throw error here since "err" not initialised previously
   if err != nil {
     panic(err)
   }
