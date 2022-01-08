@@ -43,6 +43,31 @@ func (c *LFUCache) init() {
 		freq:  0,
 		items: make(map[*lfuItem]struct{}),
 	})
+
+	if c.expireCheckInterval != nil && *c.expireCheckInterval != 0 {
+		go func() {
+			for range time.Tick(*c.expireCheckInterval) {
+				for key := range c.items {
+					now := time.Now()
+					c.checkAndDeleteExpire(key, &now)
+				}
+			}
+		}()
+	}
+}
+
+func (c *LFUCache) checkAndDeleteExpire(key interface{}, now *time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	item, ok := c.items[key]
+	if !ok {
+		return
+	}
+
+	if item.IsExpired(now) {
+		c.remove(key)
+	}
 }
 
 // Set a new key-value pair

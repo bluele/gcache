@@ -49,17 +49,18 @@ type Cache interface {
 }
 
 type baseCache struct {
-	clock            Clock
-	size             int
-	loaderExpireFunc LoaderExpireFunc
-	evictedFunc      EvictedFunc
-	purgeVisitorFunc PurgeVisitorFunc
-	addedFunc        AddedFunc
-	deserializeFunc  DeserializeFunc
-	serializeFunc    SerializeFunc
-	expiration       *time.Duration
-	mu               sync.RWMutex
-	loadGroup        Group
+	clock               Clock
+	size                int
+	loaderExpireFunc    LoaderExpireFunc
+	evictedFunc         EvictedFunc
+	purgeVisitorFunc    PurgeVisitorFunc
+	addedFunc           AddedFunc
+	deserializeFunc     DeserializeFunc
+	serializeFunc       SerializeFunc
+	expiration          *time.Duration
+	expireCheckInterval *time.Duration
+	mu                  sync.RWMutex
+	loadGroup           Group
 	*stats
 }
 
@@ -74,16 +75,17 @@ type (
 )
 
 type CacheBuilder struct {
-	clock            Clock
-	tp               string
-	size             int
-	loaderExpireFunc LoaderExpireFunc
-	evictedFunc      EvictedFunc
-	purgeVisitorFunc PurgeVisitorFunc
-	addedFunc        AddedFunc
-	expiration       *time.Duration
-	deserializeFunc  DeserializeFunc
-	serializeFunc    SerializeFunc
+	clock               Clock
+	tp                  string
+	size                int
+	loaderExpireFunc    LoaderExpireFunc
+	evictedFunc         EvictedFunc
+	purgeVisitorFunc    PurgeVisitorFunc
+	addedFunc           AddedFunc
+	expiration          *time.Duration
+	expireCheckInterval *time.Duration
+	deserializeFunc     DeserializeFunc
+	serializeFunc       SerializeFunc
 }
 
 func New(size int) *CacheBuilder {
@@ -168,6 +170,11 @@ func (cb *CacheBuilder) Expiration(expiration time.Duration) *CacheBuilder {
 	return cb
 }
 
+func (cb *CacheBuilder) ExpireCheckInterval(expireCheckInterval time.Duration) *CacheBuilder {
+	cb.expireCheckInterval = &expireCheckInterval
+	return cb
+}
+
 func (cb *CacheBuilder) Build() Cache {
 	if cb.size <= 0 && cb.tp != TYPE_SIMPLE {
 		panic("gcache: Cache size <= 0")
@@ -201,6 +208,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.serializeFunc = cb.serializeFunc
 	c.evictedFunc = cb.evictedFunc
 	c.purgeVisitorFunc = cb.purgeVisitorFunc
+	c.expireCheckInterval = cb.expireCheckInterval
 	c.stats = &stats{}
 }
 
