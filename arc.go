@@ -2,6 +2,7 @@ package gcache
 
 import (
 	"container/list"
+	"context"
 	"time"
 )
 
@@ -164,9 +165,13 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 
 // Get a value from cache pool using key if it exists. If not exists and it has LoaderFunc, it will generate the value using you have specified LoaderFunc method returns value.
 func (c *ARC) Get(key interface{}) (interface{}, error) {
+	return c.GetContext(context.Background(), key)
+}
+
+func (c *ARC) GetContext(ctx context.Context, key interface{}) (interface{}, error) {
 	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
-		return c.getWithLoader(key, true)
+		return c.getWithLoader(ctx, key, true)
 	}
 	return v, err
 }
@@ -175,9 +180,12 @@ func (c *ARC) Get(key interface{}) (interface{}, error) {
 // If it does not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *ARC) GetIFPresent(key interface{}) (interface{}, error) {
+	return c.GetIFPresentContext(context.Background(), key)
+}
+func (c *ARC) GetIFPresentContext(ctx context.Context, key interface{}) (interface{}, error) {
 	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
-		return c.getWithLoader(key, false)
+		return c.getWithLoader(ctx, key, false)
 	}
 	return v, err
 }
@@ -237,11 +245,11 @@ func (c *ARC) getValue(key interface{}, onLoad bool) (interface{}, error) {
 	return nil, KeyNotFoundError
 }
 
-func (c *ARC) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
-	if c.loaderExpireFunc == nil {
+func (c *ARC) getWithLoader(ctx context.Context, key interface{}, isWait bool) (interface{}, error) {
+	if c.loaderExpireContextFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	value, _, err := c.load(key, func(v interface{}, expiration *time.Duration, e error) (interface{}, error) {
+	value, _, err := c.load(ctx, key, func(v interface{}, expiration *time.Duration, e error) (interface{}, error) {
 		if e != nil {
 			return nil, e
 		}

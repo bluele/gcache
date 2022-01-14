@@ -1,6 +1,7 @@
 package gcache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -44,46 +45,50 @@ type Cache interface {
 	Len(checkExpired bool) int
 	// Has returns true if the key exists in the cache.
 	Has(key interface{}) bool
+	GetContext(ctx context.Context, key interface{}) (interface{}, error)
+	GetIFPresentContext(ctx context.Context, key interface{}) (interface{}, error)
 
 	statsAccessor
 }
 
 type baseCache struct {
-	clock            Clock
-	size             int
-	loaderExpireFunc LoaderExpireFunc
-	evictedFunc      EvictedFunc
-	purgeVisitorFunc PurgeVisitorFunc
-	addedFunc        AddedFunc
-	deserializeFunc  DeserializeFunc
-	serializeFunc    SerializeFunc
-	expiration       *time.Duration
-	mu               sync.RWMutex
-	loadGroup        Group
+	clock                   Clock
+	size                    int
+	loaderExpireContextFunc LoaderExpireContextFunc
+	evictedFunc             EvictedFunc
+	purgeVisitorFunc        PurgeVisitorFunc
+	addedFunc               AddedFunc
+	deserializeFunc         DeserializeFunc
+	serializeFunc           SerializeFunc
+	expiration              *time.Duration
+	mu                      sync.RWMutex
+	loadGroup               Group
 	*stats
 }
 
 type (
-	LoaderFunc       func(interface{}) (interface{}, error)
-	LoaderExpireFunc func(interface{}) (interface{}, *time.Duration, error)
-	EvictedFunc      func(interface{}, interface{})
-	PurgeVisitorFunc func(interface{}, interface{})
-	AddedFunc        func(interface{}, interface{})
-	DeserializeFunc  func(interface{}, interface{}) (interface{}, error)
-	SerializeFunc    func(interface{}, interface{}) (interface{}, error)
+	LoaderFunc              func(interface{}) (interface{}, error)
+	LoaderContextFunc       func(context.Context, interface{}) (interface{}, error)
+	LoaderExpireFunc        func(interface{}) (interface{}, *time.Duration, error)
+	LoaderExpireContextFunc func(context.Context, interface{}) (interface{}, *time.Duration, error)
+	EvictedFunc             func(interface{}, interface{})
+	PurgeVisitorFunc        func(interface{}, interface{})
+	AddedFunc               func(interface{}, interface{})
+	DeserializeFunc         func(interface{}, interface{}) (interface{}, error)
+	SerializeFunc           func(interface{}, interface{}) (interface{}, error)
 )
 
 type CacheBuilder struct {
-	clock            Clock
-	tp               string
-	size             int
-	loaderExpireFunc LoaderExpireFunc
-	evictedFunc      EvictedFunc
-	purgeVisitorFunc PurgeVisitorFunc
-	addedFunc        AddedFunc
-	expiration       *time.Duration
-	deserializeFunc  DeserializeFunc
-	serializeFunc    SerializeFunc
+	clock                   Clock
+	tp                      string
+	size                    int
+	loaderExpireContextFunc LoaderExpireContextFunc
+	evictedFunc             EvictedFunc
+	purgeVisitorFunc        PurgeVisitorFunc
+	addedFunc               AddedFunc
+	expiration              *time.Duration
+	deserializeFunc         DeserializeFunc
+	serializeFunc           SerializeFunc
 }
 
 func New(size int) *CacheBuilder {
@@ -102,18 +107,33 @@ func (cb *CacheBuilder) Clock(clock Clock) *CacheBuilder {
 // Set a loader function.
 // loaderFunc: create a new value with this function if cached value is expired.
 func (cb *CacheBuilder) LoaderFunc(loaderFunc LoaderFunc) *CacheBuilder {
-	cb.loaderExpireFunc = func(k interface{}) (interface{}, *time.Duration, error) {
+	cb.loaderExpireContextFunc = func(_ context.Context, k interface{}) (interface{}, *time.Duration, error) {
 		v, err := loaderFunc(k)
 		return v, nil, err
 	}
 	return cb
 }
 
+func (cb *CacheBuilder) LoaderContextFunc(loaderContextFunc LoaderContextFunc) *CacheBuilder {
+	cb.loaderExpireContextFunc = func(ctx context.Context, k interface{}) (interface{}, *time.Duration, error) {
+		v, err := loaderContextFunc(ctx, k)
+		return v, nil, err
+	}
+	return cb
+}
+
 // Set a loader function with expiration.
-// loaderExpireFunc: create a new value with this function if cached value is expired.
-// If nil returned instead of time.Duration from loaderExpireFunc than value will never expire.
+// loaderExpireContextFunc: create a new value with this function if cached value is expired.
+// If nil returned instead of time.Duration from loaderExpireContextFunc than value will never expire.
 func (cb *CacheBuilder) LoaderExpireFunc(loaderExpireFunc LoaderExpireFunc) *CacheBuilder {
-	cb.loaderExpireFunc = loaderExpireFunc
+	cb.loaderExpireContextFunc = func(_ context.Context, i2 interface{}) (i interface{}, duration *time.Duration, err error) {
+		return loaderExpireFunc(i2)
+	}
+	return cb
+}
+
+func (cb *CacheBuilder) LoaderExpireContextFunc(loaderExpireContextFunc LoaderExpireContextFunc) *CacheBuilder {
+	cb.loaderExpireContextFunc = loaderExpireContextFunc
 	return cb
 }
 
@@ -194,7 +214,7 @@ func (cb *CacheBuilder) build() Cache {
 func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.clock = cb.clock
 	c.size = cb.size
-	c.loaderExpireFunc = cb.loaderExpireFunc
+	c.loaderExpireContextFunc = cb.loaderExpireContextFunc
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
 	c.deserializeFunc = cb.deserializeFunc
@@ -205,14 +225,14 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 }
 
 // load a new value using by specified key.
-func (c *baseCache) load(key interface{}, cb func(interface{}, *time.Duration, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
+func (c *baseCache) load(ctx context.Context, key interface{}, cb func(interface{}, *time.Duration, error) (interface{}, error), isWait bool) (interface{}, bool, error) {
 	v, called, err := c.loadGroup.Do(key, func() (v interface{}, e error) {
 		defer func() {
 			if r := recover(); r != nil {
 				e = fmt.Errorf("Loader panics: %v", r)
 			}
 		}()
-		return cb(c.loaderExpireFunc(key))
+		return cb(c.loaderExpireContextFunc(ctx, key))
 	}, isWait)
 	if err != nil {
 		return nil, called, err

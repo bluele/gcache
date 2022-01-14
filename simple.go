@@ -1,6 +1,7 @@
 package gcache
 
 import (
+	"context"
 	"time"
 )
 
@@ -90,9 +91,13 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 // If it does not exists key and has LoaderFunc,
 // generate a value using `LoaderFunc` method returns value.
 func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
+	return c.GetContext(context.Background(), key)
+}
+
+func (c *SimpleCache) GetContext(ctx context.Context, key interface{}) (interface{}, error) {
 	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
-		return c.getWithLoader(key, true)
+		return c.getWithLoader(ctx, key, true)
 	}
 	return v, err
 }
@@ -101,9 +106,13 @@ func (c *SimpleCache) Get(key interface{}) (interface{}, error) {
 // If it does not exists key, returns KeyNotFoundError.
 // And send a request which refresh value for specified key if cache object has LoaderFunc.
 func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
+	return c.GetIFPresentContext(context.Background(), key)
+}
+
+func (c *SimpleCache) GetIFPresentContext(ctx context.Context, key interface{}) (interface{}, error) {
 	v, err := c.get(key, false)
 	if err == KeyNotFoundError {
-		return c.getWithLoader(key, false)
+		return c.getWithLoader(ctx, key, false)
 	}
 	return v, nil
 }
@@ -140,11 +149,11 @@ func (c *SimpleCache) getValue(key interface{}, onLoad bool) (interface{}, error
 	return nil, KeyNotFoundError
 }
 
-func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, error) {
-	if c.loaderExpireFunc == nil {
+func (c *SimpleCache) getWithLoader(ctx context.Context, key interface{}, isWait bool) (interface{}, error) {
+	if c.loaderExpireContextFunc == nil {
 		return nil, KeyNotFoundError
 	}
-	value, _, err := c.load(key, func(v interface{}, expiration *time.Duration, e error) (interface{}, error) {
+	value, _, err := c.load(ctx, key, func(v interface{}, expiration *time.Duration, e error) (interface{}, error) {
 		if e != nil {
 			return nil, e
 		}

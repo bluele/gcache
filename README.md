@@ -15,6 +15,7 @@ Cache library for golang. It supports expirable Cache, LFU, LRU and ARC.
 
 * Automatically load cache if it doesn't exists. (Optional)
 
+
 ## Install
 
 ```
@@ -111,8 +112,46 @@ func main() {
   fmt.Println("Get:", value)
 }
 ```
+```
+Get: ok
+```
+
+### Automatically load value with context
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/bluele/gcache"
+)
+
+func main() {
+	gc := gcache.New(20).
+		LRU().
+		LoaderContextFunc(func(ctx context.Context, key interface{}) (interface{}, error) {
+            // should print hello
+			fmt.Println("Ctx Value:", ctx.Value("something"))
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+				return "ok", nil
+			}
+		}).
+		Build()
+	value, err := gc.GetContext(context.WithValue(context.Background(), "something", "hello"), "key")
+	if err != nil {
+		panic(err)
+	}
+	// should print ok
+	fmt.Println("Get:", value)
+}
+``` 
 
 ```
+Ctx Value: hello
 Get: ok
 ```
 
@@ -167,6 +206,76 @@ func main() {
 ```
 Get: ok
 evicted key: key
+Get: ok
+purged key: key
+```
+
+### Automatically load value with expiration and context
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/bluele/gcache"
+)
+
+func main() {
+	var evictCounter, loaderCounter, purgeCounter int
+	gc := gcache.New(20).
+		LRU().
+		LoaderExpireContextFunc(func(ctx context.Context, key interface{}) (interface{}, *time.Duration, error) {
+			if v := ctx.Value("popular"); v != nil {
+				// should print lemonade
+				fmt.Println("popular:", v)
+			}
+			loaderCounter++
+			expire := 1 * time.Second
+			return "ok", &expire, nil
+		}).
+		EvictedFunc(func(key, value interface{}) {
+			evictCounter++
+			fmt.Println("evicted key:", key)
+		}).
+		PurgeVisitorFunc(func(key, value interface{}) {
+			purgeCounter++
+			fmt.Println("purged key:", key)
+		}).
+		Build()
+	value, err := gc.Get("key")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Get:", value)
+	time.Sleep(1 * time.Second)
+	value, err = gc.Get("key")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Get:", value)
+	time.Sleep(1 * time.Second)
+	value, err = gc.GetContext(context.WithValue(context.Background(), "popular", "lemonade"), "key")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Get:", value)
+	time.Sleep(1 * time.Second)
+	gc.Purge()
+	if loaderCounter != evictCounter+purgeCounter {
+		panic("bad")
+	}
+}
+```
+
+```
+Get: ok
+evicted key: key
+Get: ok
+evicted key: key
+popular: lemonade
 Get: ok
 purged key: key
 ```
