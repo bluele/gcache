@@ -58,7 +58,7 @@ type baseCache struct {
 	deserializeFunc  DeserializeFunc
 	serializeFunc    SerializeFunc
 	expiration       *time.Duration
-	mu               sync.RWMutex
+	mu               Locker
 	loadGroup        Group
 	*stats
 }
@@ -73,6 +73,19 @@ type (
 	SerializeFunc    func(interface{}, interface{}) (interface{}, error)
 )
 
+type Locker interface {
+	RLock()
+	RUnlock()
+	sync.Locker
+}
+
+type noopLocker struct{}
+
+func (noopLocker) RLock()   {}
+func (noopLocker) RUnlock() {}
+func (noopLocker) Lock()    {}
+func (noopLocker) Unlock()  {}
+
 type CacheBuilder struct {
 	clock            Clock
 	tp               string
@@ -84,14 +97,21 @@ type CacheBuilder struct {
 	expiration       *time.Duration
 	deserializeFunc  DeserializeFunc
 	serializeFunc    SerializeFunc
+	locker           Locker
 }
 
 func New(size int) *CacheBuilder {
 	return &CacheBuilder{
-		clock: NewRealClock(),
-		tp:    TYPE_SIMPLE,
-		size:  size,
+		clock:  NewRealClock(),
+		tp:     TYPE_SIMPLE,
+		size:   size,
+		locker: &sync.RWMutex{},
 	}
+}
+
+func (cb *CacheBuilder) NoLock() *CacheBuilder {
+	cb.locker = noopLocker{}
+	return cb
 }
 
 func (cb *CacheBuilder) Clock(clock Clock) *CacheBuilder {
@@ -202,6 +222,7 @@ func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.evictedFunc = cb.evictedFunc
 	c.purgeVisitorFunc = cb.purgeVisitorFunc
 	c.stats = &stats{}
+	c.mu = cb.locker
 }
 
 // load a new value using by specified key.
