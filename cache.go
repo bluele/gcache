@@ -182,9 +182,9 @@ func (cb *CacheBuilder) Build() Cache {
 	return cb.build()
 }
 
-func (cb *CacheBuilder) ShardCount(cnt int) Cache {
+func (cb *CacheBuilder) ShardCount(cnt int) *CacheBuilder {
 	cb.shardCount = cnt
-	return cb.build()
+	return cb
 }
 
 func (cb *CacheBuilder) build() Cache {

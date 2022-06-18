@@ -87,11 +87,20 @@ func (c *ARCShard) Keys(checkExpired bool) []interface{} {
 }
 
 func (c *ARCShard) Len(checkExpired bool) int {
-	//TODO
-	return 0
+	len := 0
+	for _, arc := range c.shard {
+		l := arc.Len(checkExpired)
+		len += l
+	}
+	return len
 }
 
 func (c *ARCShard) Has(key interface{}) bool {
-	//TODO
-	return false
+	ok := false
+	for _, arc := range c.shard {
+		if ok = arc.Has(key); ok == true {
+			break
+		}
+	}
+	return ok
 }

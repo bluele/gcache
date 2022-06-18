@@ -161,3 +161,17 @@ func buildTestLoadingCacheWithExpiration(t *testing.T, tp string, size int, ep t
 		EvictedFunc(getSimpleEvictedFunc(t)).
 		Build()
 }
+
+func buildTest(t *testing.T, tp string, size int) *CacheBuilder {
+	return New(size).
+		EvictType(tp).
+		EvictedFunc(getSimpleEvictedFunc(t))
+}
+
+func buildTestLoadingWithExpiration(t *testing.T, tp string, size int, ep time.Duration) *CacheBuilder {
+	return New(size).
+		EvictType(tp).
+		Expiration(ep).
+		LoaderFunc(loader).
+		EvictedFunc(getSimpleEvictedFunc(t))
+}
