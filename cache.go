@@ -51,6 +51,7 @@ type Cache interface {
 type baseCache struct {
 	clock            Clock
 	size             int
+	shardCount       int
 	loaderExpireFunc LoaderExpireFunc
 	evictedFunc      EvictedFunc
 	purgeVisitorFunc PurgeVisitorFunc
@@ -77,6 +78,7 @@ type CacheBuilder struct {
 	clock            Clock
 	tp               string
 	size             int
+	shardCount       int
 	loaderExpireFunc LoaderExpireFunc
 	evictedFunc      EvictedFunc
 	purgeVisitorFunc PurgeVisitorFunc
@@ -173,7 +175,16 @@ func (cb *CacheBuilder) Build() Cache {
 		panic("gcache: Cache size <= 0")
 	}
 
+	if cb.shardCount <= 0 {
+		panic("gcache: Shard Count <= 0")
+	}
+
 	return cb.build()
+}
+
+func (cb *CacheBuilder) ShardCount(cnt int) *CacheBuilder {
+	cb.shardCount = cnt
+	return cb
 }
 
 func (cb *CacheBuilder) build() Cache {
@@ -185,6 +196,9 @@ func (cb *CacheBuilder) build() Cache {
 	case TYPE_LFU:
 		return newLFUCache(cb)
 	case TYPE_ARC:
+		if cb.shardCount > 0 {
+			return newARCShard(cb)
+		}
 		return newARC(cb)
 	default:
 		panic("gcache: Unknown type " + cb.tp)
@@ -194,6 +208,7 @@ func (cb *CacheBuilder) build() Cache {
 func buildCache(c *baseCache, cb *CacheBuilder) {
 	c.clock = cb.clock
 	c.size = cb.size
+	c.shardCount = cb.shardCount
 	c.loaderExpireFunc = cb.loaderExpireFunc
 	c.expiration = cb.expiration
 	c.addedFunc = cb.addedFunc
