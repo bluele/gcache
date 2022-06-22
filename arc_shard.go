@@ -1,6 +1,8 @@
 package gcache
 
-import "time"
+import (
+	"time"
+)
 
 type ARCShard struct {
 	shard []*ARC
@@ -96,11 +98,6 @@ func (c *ARCShard) Len(checkExpired bool) int {
 }
 
 func (c *ARCShard) Has(key interface{}) bool {
-	ok := false
-	for _, arc := range c.shard {
-		if ok = arc.Has(key); ok == true {
-			break
-		}
-	}
-	return ok
+	arc := c.getShard(key)
+	return arc.Has(key)
 }
