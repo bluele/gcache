@@ -234,15 +234,3 @@ func (c *baseCache) load(key interface{}, cb func(interface{}, *time.Duration, e
 	}
 	return v, called, nil
 }
-
-func fnv32(k interface{}) uint32 {
-	key := k.(string)
-	hash := uint32(2166136261)
-	const prime32 = uint32(16777619)
-	keyLength := len(key)
-	for i := 0; i < keyLength; i++ {
-		hash *= prime32
-		hash ^= uint32(key[i])
-	}
-	return hash
-}

@@ -117,3 +117,9 @@ func TestARCShardHas(t *testing.T) {
 		})
 	}
 }
+
+func TestKey(t *testing.T) {
+	key := "bbb"
+	h := efaceHash(key, 1)
+	t.Log(h)
+}

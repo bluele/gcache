@@ -2,6 +2,7 @@ package gcache
 
 import (
 	"time"
+	_ "unsafe"
 )
 
 type ARCShard struct {
@@ -31,7 +32,8 @@ func (c *ARCShard) init(cb *CacheBuilder) {
 
 // GetShard returns shard under given key
 func (c *ARCShard) getShard(key interface{}) *ARC {
-	return c.shard[uint(fnv32(key))%uint(c.shardCount)]
+	hash := efaceHash(key, 1)
+	return c.shard[uint(hash)%uint(c.shardCount)]
 }
 
 func (c *ARCShard) Set(key, value interface{}) error {
@@ -101,3 +103,6 @@ func (c *ARCShard) Has(key interface{}) bool {
 	arc := c.getShard(key)
 	return arc.Has(key)
 }
+
+//go:linkname efaceHash runtime.efaceHash
+func efaceHash(i interface{}, seed uintptr) uintptr
