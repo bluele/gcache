@@ -225,7 +225,7 @@ func (c *LFUCache) increment(item *lfuItem) {
 	item.freqElement = nextFreqElement
 }
 
-// evict removes the least frequence item from the cache.
+// evict removes the least frequent item from the cache.
 func (c *LFUCache) evict(count int) {
 	entry := c.freqList.Front()
 	for i := 0; i < count; {
