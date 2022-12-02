@@ -108,6 +108,22 @@ func (c *SimpleCache) GetIFPresent(key interface{}) (interface{}, error) {
 	return v, nil
 }
 
+// GetOrSetFunc return the value and set if the key not found.
+func (c *SimpleCache) GetOrSetFunc(key interface{}, f func() (interface{}, error), duration time.Duration) (interface{}, error) {
+	v, err := c.Get(key)
+	if err == KeyNotFoundError {
+		value, err := f()
+		if err != nil {
+			return nil, err
+		}
+		if value == nil {
+			return nil, nil
+		}
+		return v, c.SetWithExpire(key, value, duration)
+	}
+	return v, nil
+}
+
 func (c *SimpleCache) get(key interface{}, onLoad bool) (interface{}, error) {
 	v, err := c.getValue(key, onLoad)
 	if err != nil {
