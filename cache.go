@@ -30,6 +30,8 @@ type Cache interface {
 	// GetIFPresent returns the value for the specified key if it is present in the cache.
 	// Return KeyNotFoundError if the key is not present.
 	GetIFPresent(key interface{}) (interface{}, error)
+	// GetOrSetFunc return the value and set if the key not found.
+	GetOrSetFunc(key interface{}, f func() (interface{}, error), duration time.Duration) (interface{}, error)
 	// GetAll returns a map containing all key-value pairs in the cache.
 	GetALL(checkExpired bool) map[interface{}]interface{}
 	get(key interface{}, onLoad bool) (interface{}, error)
