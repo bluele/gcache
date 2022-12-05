@@ -53,7 +53,7 @@ func (c *ARC) replace(key interface{}) {
 	if ok {
 		delete(c.items, old)
 		if c.evictedFunc != nil {
-			c.evictedFunc(item.key, item.value)
+			c.evictedFunc(old, item.value)
 		}
 	}
 }
@@ -94,7 +94,6 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 	} else {
 		item = &arcItem{
 			clock: c.clock,
-			key:   key,
 			value: value,
 		}
 		c.items[key] = item
@@ -141,7 +140,7 @@ func (c *ARC) set(key, value interface{}) (interface{}, error) {
 			if ok {
 				delete(c.items, pop)
 				if c.evictedFunc != nil {
-					c.evictedFunc(item.key, item.value)
+					c.evictedFunc(pop, item.value)
 				}
 			}
 		}
@@ -209,7 +208,7 @@ func (c *ARC) getValue(key interface{}, onLoad bool) (interface{}, error) {
 			delete(c.items, key)
 			c.b1.PushFront(key)
 			if c.evictedFunc != nil {
-				c.evictedFunc(item.key, item.value)
+				c.evictedFunc(key, item.value)
 			}
 		}
 	}
@@ -226,7 +225,7 @@ func (c *ARC) getValue(key interface{}, onLoad bool) (interface{}, error) {
 			c.t2.Remove(key, elt)
 			c.b2.PushFront(key)
 			if c.evictedFunc != nil {
-				c.evictedFunc(item.key, item.value)
+				c.evictedFunc(key, item.value)
 			}
 		}
 	}
@@ -364,8 +363,8 @@ func (c *ARC) Purge() {
 	defer c.mu.Unlock()
 
 	if c.purgeVisitorFunc != nil {
-		for _, item := range c.items {
-			c.purgeVisitorFunc(item.key, item.value)
+		for key, item := range c.items {
+			c.purgeVisitorFunc(key, item.value)
 		}
 	}
 
@@ -401,7 +400,6 @@ type arcList struct {
 
 type arcItem struct {
 	clock      Clock
-	key        interface{}
 	value      interface{}
 	expiration *time.Time
 }
