@@ -83,7 +83,7 @@ func main() {
 ```
 Get: ok
 // 10 seconds later, new attempt:
-panic: ErrKeyNotFound
+panic: KeyNotFoundError
 ```
 
 
