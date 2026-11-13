@@ -248,7 +248,7 @@ func (c *LFUCache) evict(count int) {
 func (c *LFUCache) Has(key interface{}) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	now := time.Now()
+	now := c.clock.Now()
 	return c.has(key, &now)
 }
 
@@ -306,7 +306,7 @@ func (c *LFUCache) GetALL(checkExpired bool) map[interface{}]interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	items := make(map[interface{}]interface{}, len(c.items))
-	now := time.Now()
+	now := c.clock.Now()
 	for k, item := range c.items {
 		if !checkExpired || c.has(k, &now) {
 			items[k] = item.value
@@ -320,7 +320,7 @@ func (c *LFUCache) Keys(checkExpired bool) []interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	keys := make([]interface{}, 0, len(c.items))
-	now := time.Now()
+	now := c.clock.Now()
 	for k := range c.items {
 		if !checkExpired || c.has(k, &now) {
 			keys = append(keys, k)
@@ -337,7 +337,7 @@ func (c *LFUCache) Len(checkExpired bool) int {
 		return len(c.items)
 	}
 	var length int
-	now := time.Now()
+	now := c.clock.Now()
 	for k := range c.items {
 		if c.has(k, &now) {
 			length++
