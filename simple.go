@@ -174,9 +174,17 @@ func (c *SimpleCache) evict(count int) {
 			return
 		}
 		if item.expiration == nil || now.After(*item.expiration) {
-			defer c.remove(key)
+			c.remove(key)
 			current++
 		}
+	}
+	// If every remaining item has a future expiration, still enforce the size limit.
+	for key := range c.items {
+		if current >= count {
+			return
+		}
+		c.remove(key)
+		current++
 	}
 }
 
