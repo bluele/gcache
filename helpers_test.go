@@ -154,10 +154,13 @@ func buildTestLoadingCache(t *testing.T, tp string, size int, loader LoaderFunc)
 }
 
 func buildTestLoadingCacheWithExpiration(t *testing.T, tp string, size int, ep time.Duration) Cache {
-	return New(size).
+	cache := New(size).
 		EvictType(tp).
 		Expiration(ep).
 		LoaderFunc(loader).
 		EvictedFunc(getSimpleEvictedFunc(t)).
 		Build()
+	// Expiration callbacks must finish before the testing.T they log to.
+	t.Cleanup(cache.Purge)
+	return cache
 }

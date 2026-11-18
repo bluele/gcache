@@ -71,13 +71,24 @@ func (me *TimeWheel) mainloop() {
 	tk := time.NewTicker(time.Millisecond * 600)
 	lastTime := time.Now().Unix()
 	expiredJobTimes := map[int64]struct{}{}
+	var pendingJobs []*Job
 	for {
+		tick := tk.C
+		var dispatchJobs chan *Job
+		var nextJob *Job
+		if len(pendingJobs) > 0 {
+			// Keep receiving requests even when a callback blocks dispatch.
+			// Finish this batch before collecting another tick's expirations.
+			tick = nil
+			dispatchJobs = me.dispatchJobs
+			nextJob = pendingJobs[0]
+		}
 		select {
-		case now := <-tk.C:
+		case now := <-tick:
 			for jobTime := range expiredJobTimes {
 				for _, job := range me.jobsByTime[jobTime] {
 					delete(me.jobsById, job.Id)
-					me.dispatchJobs <- job
+					pendingJobs = append(pendingJobs, job)
 				}
 				delete(me.jobsByTime, jobTime)
 			}
@@ -86,13 +97,16 @@ func (me *TimeWheel) mainloop() {
 			for jobTime := lastTime + 1; jobTime <= nowTs; jobTime++ {
 				for _, job := range me.jobsByTime[jobTime] {
 					delete(me.jobsById, job.Id)
-					me.dispatchJobs <- job
+					pendingJobs = append(pendingJobs, job)
 				}
 				delete(me.jobsByTime, jobTime)
 			}
 			if now.Unix() > lastTime {
 				lastTime = nowTs
 			}
+		case dispatchJobs <- nextJob:
+			pendingJobs[0] = nil
+			pendingJobs = pendingJobs[1:]
 		case req := <-me.reqs:
 			if req.action == 0 {
 				if job, ok := me.jobsById[req.job.Id]; ok {
@@ -114,6 +128,8 @@ func (me *TimeWheel) mainloop() {
 			} else if req.action == 2 {
 				me.jobsByTime = map[int64]map[interface{}]*Job{}
 				me.jobsById = map[interface{}]*Job{}
+				expiredJobTimes = map[int64]struct{}{}
+				pendingJobs = nil
 
 			}
 		}

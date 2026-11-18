@@ -9,9 +9,8 @@ import (
 // SimpleCache has no clear priority for evict cache. It depends on key-value map order.
 type SimpleCache struct {
 	baseCache
-	items       map[interface{}]*simpleItem
-	tw          *timewheel.TimeWheel
-	expiredKeys chan interface{}
+	items map[interface{}]*simpleItem
+	tw    *timewheel.TimeWheel
 }
 
 func newSimpleCache(cb *CacheBuilder) *SimpleCache {
@@ -19,8 +18,6 @@ func newSimpleCache(cb *CacheBuilder) *SimpleCache {
 	buildCache(&c.baseCache, cb)
 	c.tw = timewheel.New(1e3, 1e3)
 	c.tw.SetCallback(c.gcKey)
-	c.expiredKeys = make(chan interface{}, 1e3)
-	go c.gc()
 	c.init()
 	c.loadGroup.cache = c
 	return c
@@ -35,32 +32,15 @@ func (c *SimpleCache) init() {
 	c.tw.Purge()
 }
 
-func (me *SimpleCache) gc() {
-	/**
-	go func() {
-		time.Sleep(time.Second * 9)
-		log.Println(len(me.items))
-	}()
-	*/
-	keys := make([]interface{}, 0, 1e3)
-	for key := range me.expiredKeys {
-		keys = append(keys, key)
-		if len(keys) == 1e3 {
-			me.mu.Lock()
-			now := me.clock.Now()
-			for _, key := range keys {
-				if item, ok := me.items[key]; ok && item.IsExpired(&now) {
-					delete(me.items, key)
-				}
-			}
-			keys = keys[0:0]
-			me.mu.Unlock()
-		}
+// gcKey removes each expired entry without waiting for a full batch. The
+// timewheel continues accepting requests while a callback waits for this lock.
+func (c *SimpleCache) gcKey(job *timewheel.Job) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := c.clock.Now()
+	if item, ok := c.items[job.Id]; ok && item.IsExpired(&now) {
+		c.remove(job.Id)
 	}
-}
-
-func (me *SimpleCache) gcKey(job *timewheel.Job) {
-	me.expiredKeys <- job.Id
 }
 
 // Set a new key-value pair
@@ -84,7 +64,7 @@ func (c *SimpleCache) SetWithExpire(key, value interface{}, expiration time.Dura
 	item.(*simpleItem).expiration = &t
 	c.tw.Add(&timewheel.Job{
 		Id:   key,
-		Time: t.Unix() + 5,
+		Time: t.Unix() + 1, // Round up: the second-resolution wheel must not fire before expiry.
 	})
 	return nil
 }
@@ -119,7 +99,7 @@ func (c *SimpleCache) set(key, value interface{}) (interface{}, error) {
 		item.expiration = &t
 		c.tw.Add(&timewheel.Job{
 			Id:   key,
-			Time: t.Unix() + 5,
+			Time: t.Unix() + 1, // Round up: the second-resolution wheel must not fire before expiry.
 		})
 	}
 
@@ -176,7 +156,6 @@ func (c *SimpleCache) getValue(key interface{}, onLoad bool) (interface{}, error
 			return v, nil
 		}
 		c.remove(key)
-		//c.tw.Delete(key)
 	}
 	c.mu.Unlock()
 	if !onLoad {
@@ -204,7 +183,7 @@ func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, 
 			item.(*simpleItem).expiration = &t
 			c.tw.Add(&timewheel.Job{
 				Id:   key,
-				Time: t.Unix() + 5,
+				Time: t.Unix() + 1, // Round up: the second-resolution wheel must not fire before expiry.
 			})
 		}
 		return v, nil
@@ -217,15 +196,22 @@ func (c *SimpleCache) getWithLoader(key interface{}, isWait bool) (interface{}, 
 
 func (c *SimpleCache) evict(count int) {
 	now := c.clock.Now()
-	current := 0
 	for key, item := range c.items {
-		if current >= count {
+		if count == 0 {
 			return
 		}
-		if item.expiration == nil || now.After(*item.expiration) {
-			defer c.remove(key)
-			current++
+		if item.IsExpired(&now) {
+			c.remove(key)
+			count--
 		}
+	}
+	// SimpleCache has no recency policy, but a configured capacity is a hard cap.
+	for key := range c.items {
+		if count == 0 {
+			return
+		}
+		c.remove(key)
+		count--
 	}
 }
 
@@ -260,7 +246,6 @@ func (c *SimpleCache) remove(key interface{}) bool {
 		if c.evictedFunc != nil {
 			c.evictedFunc(key, item.value)
 		}
-		//c.tw.Delete(key)
 		return true
 	}
 	return false
